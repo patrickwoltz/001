@@ -163,25 +163,23 @@
                                     <div class="text-xs font-mono text-gray-400">BTC</div>
                                 </div>
                             </div>
+                            <!-- 1. Preço -->
                             <div class="md:text-center">
                                 <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
                                 <div class="font-mono text-base font-medium" id="btcPriceOut">Carregando...</div>
                                 <div class="text-[10px] font-mono" id="btcChangeOut">—</div>
                             </div>
+                            <!-- 2. Média de 200 dias -->
                             <div class="md:text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
-                                <div class="font-mono text-base font-medium" id="btcAthOut">—</div>
-                                <div class="text-[10px] font-mono text-gray-500" id="btcAthDate">—</div>
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Média de 200d (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="btcSmaOut">—</div>
                             </div>
-                            <!-- Próximo Halving Posicionado ao lado do ATH -->
+                            <!-- 3. Mayer Multiple -->
                             <div class="md:text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Próximo Halving</div>
-                                <div class="font-mono text-sm font-semibold text-btc" id="timeToHalvingOut">Calculando...</div>
-                            </div>
-                            <div class="md:text-right">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Mayer Multiple ⓘ</div>
                                 <div class="font-serif text-xl" id="btcMM">—</div>
-                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
                             </div>
+                            <div class="hidden md:block"></div>
                             <div class="col-span-2 sm:col-span-1 md:justify-self-end">
                                 <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
                             </div>
@@ -202,15 +200,14 @@
                                 <div class="text-[10px] font-mono" id="xautChangeOut">—</div>
                             </div>
                             <div class="md:text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
-                                <div class="font-mono text-base font-medium" id="xautAthOut">—</div>
-                                <div class="text-[10px] font-mono text-gray-500" id="xautAthDate">—</div>
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Média de 200d (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="xautSmaOut">—</div>
+                            </div>
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Mayer Multiple ⓘ</div>
+                                <div class="font-serif text-xl" id="xautMM">—</div>
                             </div>
                             <div class="hidden md:block"></div>
-                            <div class="md:text-right">
-                                <div class="font-serif text-xl" id="xautMM">—</div>
-                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
-                            </div>
                             <div class="col-span-2 sm:col-span-1 md:justify-self-end">
                                 <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
                             </div>
@@ -452,7 +449,7 @@
             try { localStorage.setItem('btcTracker.currency', curr); } catch (e) {}
             updateCurrencyButtons(curr);
 
-            ['btcPriceOut', 'btcAthOut', 'xautPriceOut', 'xautAthOut'].forEach(id => {
+            ['btcPriceOut', 'btcSmaOut', 'xautPriceOut', 'xautSmaOut'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = 'Atualizando...';
             });
@@ -463,24 +460,6 @@
 
             renderDcaTable();
             loadTrackerData();
-        }
-
-        // --- Helper de Halving ---
-        function updateHalvingCountdown() {
-            const nextHalvingDate = new Date('2028-04-17T00:00:00Z');
-            const now = new Date();
-            const diffMs = nextHalvingDate - now;
-
-            if (diffMs <= 0) {
-                document.getElementById('timeToHalvingOut').textContent = 'Ocorreu!';
-                return;
-            }
-
-            const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const months = Math.floor(totalDays / 30.4375);
-            const days = Math.floor(totalDays % 30.4375);
-
-            document.getElementById('timeToHalvingOut').textContent = `~${months}m ${days}d (${totalDays}d)`;
         }
 
         // --- Calculation Helpers ---
@@ -883,17 +862,12 @@
             if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('CoinGecko sem preços');
 
             const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
-            const athVal = dataCoin.market_data?.ath?.[vsCurrency] || currentPrice;
-            const athDateRaw = dataCoin.market_data?.ath_date?.[vsCurrency] || null;
             const change24h = dataCoin.market_data?.price_change_percentage_24h ?? null;
 
             return { 
                 price: currentPrice, 
                 sma: sma200(dataChart.prices), 
                 rawPrices: dataChart.prices,
-                ath: athVal,
-                athDateRaw,
-                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
                 change24h,
                 source: 'CoinGecko'
             };
@@ -914,8 +888,6 @@
             if (!coinData) throw new Error('CoinMarketCap sem dados');
 
             const currentPrice = coinData.quote?.[cmcCurrencyId]?.price || 0;
-            const athVal = coinData.statistics?.allTimeHigh || currentPrice;
-            const athDateRaw = coinData.statistics?.allTimeHighDate || null;
             const change24h = coinData.quote?.[cmcCurrencyId]?.percentChange24h ?? null;
 
             const now = Date.now();
@@ -929,9 +901,6 @@
                 price: currentPrice,
                 sma: sma200(simulatedPrices),
                 rawPrices: simulatedPrices,
-                ath: athVal,
-                athDateRaw,
-                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
                 change24h,
                 source: 'CoinMarketCap'
             };
@@ -985,9 +954,6 @@
                 price: currentPrice,
                 sma: sma200(rawPrices),
                 rawPrices,
-                ath: currentPrice * 1.1,
-                athDateRaw: null,
-                athDate: 'N/A',
                 change24h,
                 source: 'CoinStats'
             };
@@ -1007,9 +973,6 @@
                 price,
                 sma: sma200(simulatedPrices),
                 rawPrices: simulatedPrices,
-                ath: price * 1.1,
-                athDateRaw: null,
-                athDate: 'N/A',
                 change24h: 0,
                 source: 'Backup'
             };
@@ -1035,11 +998,10 @@
             }
         }
 
-        function updateAssetUI(prefix, price, sma, ath, athDate, change24h, currency) {
+        function updateAssetUI(prefix, price, sma, change24h, currency) {
             const mm = sma > 0 ? (price / sma) : 1;
             document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, currency);
-            document.getElementById(prefix + 'AthOut').textContent = fmtCurrency(ath, currency);
-            document.getElementById(prefix + 'AthDate').textContent = athDate;
+            document.getElementById(prefix + 'SmaOut').textContent = fmtCurrency(sma, currency);
             document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
 
             const changeEl = document.getElementById(prefix + 'ChangeOut');
@@ -1090,7 +1052,7 @@
                 const btc = btcResult.value;
                 btcData = btc.rawPrices;
                 activeSource = btc.source;
-                updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h, requestCurrency);
+                updateAssetUI('btc', btc.price, btc.sma, btc.change24h, requestCurrency);
             } else {
                 errors.push('BTC');
             }
@@ -1099,12 +1061,11 @@
                 const xaut = xautResult.value;
                 xautData = xaut.rawPrices;
                 if (!btcResult.status === 'fulfilled') activeSource = xaut.source;
-                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate, xaut.change24h, requestCurrency);
+                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.change24h, requestCurrency);
             } else {
                 errors.push('XAUT');
             }
 
-            updateHalvingCountdown();
             if (activePage === 'comparativo') {
                 renderChart();
             }
@@ -1126,9 +1087,6 @@
             updateCurrencyButtons(selectedCurrency);
             loadDcaEntries();
             renderDcaTable();
-
-            updateHalvingCountdown();
-            setInterval(updateHalvingCountdown, 60 * 1000);
 
             loadTrackerData();
 
