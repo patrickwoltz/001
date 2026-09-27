@@ -59,6 +59,20 @@
 
   .sub{color:var(--muted-dim);font-size:13.5px;line-height:1.6;max-width:52ch;margin:12px auto 0;text-align:center;}
 
+  /* Halving countdown */
+  .halving{
+    margin-bottom:36px;padding:24px 0;border-bottom:1px solid var(--line);
+    text-align:center;
+  }
+  .halving-label{font-size:12px;color:var(--muted-dim);margin-bottom:14px;}
+  .halving-date{font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .halving-countdown{display:flex;justify-content:center;gap:28px;}
+  .halving-unit{text-align:center;}
+  .halving-num{
+    font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:500;color:var(--btc);line-height:1;
+  }
+  .halving-unit .lbl{font-size:10px;color:var(--muted-dim);margin-top:6px;text-transform:uppercase;letter-spacing:.05em;}
+
   /* Ticker rows */
   .ticker{border-top:1px solid var(--line);}
   .row{
@@ -129,6 +143,17 @@
     <div class="last-fetch" id="lastFetchText">Carregando dados...</div>
   </div>
 
+  <div class="halving">
+    <div class="halving-label">Próximo halving do Bitcoin</div>
+    <div class="halving-date">19 de abril de 2028</div>
+    <div class="halving-countdown">
+      <div class="halving-unit"><div class="halving-num" id="halvingDays">—</div><div class="lbl">dias</div></div>
+      <div class="halving-unit"><div class="halving-num" id="halvingHours">—</div><div class="lbl">horas</div></div>
+      <div class="halving-unit"><div class="halving-num" id="halvingMins">—</div><div class="lbl">min</div></div>
+      <div class="halving-unit"><div class="halving-num" id="halvingSecs">—</div><div class="lbl">seg</div></div>
+    </div>
+  </div>
+
   <div class="ticker">
     <div class="row">
       <div class="row-id"><span class="dot btc-dot"></span><span class="row-name">Bitcoin<span class="full">BTC</span></span></div>
@@ -160,6 +185,29 @@
 <script>
 const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2});
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- Contagem regressiva para o halving ---
+const HALVING_DATE = new Date('2028-04-19T00:00:00-03:00');
+function startHalvingCountdown() {
+  const elDays = document.getElementById('halvingDays');
+  const elHours = document.getElementById('halvingHours');
+  const elMins = document.getElementById('halvingMins');
+  const elSecs = document.getElementById('halvingSecs');
+  function update() {
+    const diff = HALVING_DATE - new Date();
+    if (diff <= 0) { elDays.textContent = '0'; elHours.textContent = '00'; elMins.textContent = '00'; elSecs.textContent = '00'; return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor(diff % 86400000 / 3600000);
+    const m = Math.floor(diff % 3600000 / 60000);
+    const s = Math.floor(diff % 60000 / 1000);
+    elDays.textContent = d;
+    elHours.textContent = String(h).padStart(2,'0');
+    elMins.textContent = String(m).padStart(2,'0');
+    elSecs.textContent = String(s).padStart(2,'0');
+  }
+  update();
+  setInterval(update, 1000);
+}
 
 // --- Relógio em tempo real ---
 function startClock() {
@@ -232,6 +280,7 @@ async function load(){
 
 // Inicialização
 startClock();
+startHalvingCountdown();
 document.getElementById('refreshBtn').addEventListener('click', load);
 load();
 setInterval(load, 60000); // Recarrega os dados da API a cada 1 minuto
