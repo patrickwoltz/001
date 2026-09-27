@@ -14,7 +14,7 @@
                 extend: {
                     colors: {
                         btc: '#e08a3e',
-                        xaut: '#c9a536',
+                        xaut: '#a855f7',
                         up: '#c15c52',
                         ok: '#5fa87f',
                         down: '#5b93b8',
@@ -55,7 +55,7 @@
         .status .led { width: 6px; height: 6px; border-radius: 50%; background: #5c6270; }
         .status.live .led { background: #e08a3e; animation: pulse 2.4s ease-in-out infinite; }
         .status.err .led { background: #c15c52; }
-        .status.loading .led { background: #c9a536; animation: pulse 0.8s ease-in-out infinite; }
+        .status.loading .led { background: #a855f7; animation: pulse 0.8s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
         @media (prefers-reduced-motion: reduce) { .status.live .led, .status.loading .led { animation: none; } }
     </style>
@@ -182,12 +182,20 @@
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
-                        <!-- Mode Selector (Preço vs MM200) -->
+                        <!-- Seletor de Visão (BTC / XAU / Comparação) -->
                         <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded-xl">
-                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">Preços + MM200</button>
-                            <button onclick="changeMetric('mayer', event)" class="metric-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">Múltiplo MM200</button>
+                            <button onclick="changeView('btc', event)" class="view-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">BTC</button>
+                            <button onclick="changeView('xaut', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">XAU</button>
+                            <button onclick="changeView('compare', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">BTC vs. XAUt</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Legenda de cores por faixa de MM200 (só nas visões individuais) -->
+                <div id="chartColorLegend" class="mb-4 flex flex-wrap items-center gap-4 text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#5fa87f"></span>Verde: MM200 &lt; 1.0x</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#eab308"></span>Amarelo: MM200 entre 1.0x e 2.0x</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#c15c52"></span>Vermelho: MM200 ≥ 2.0x</span>
                 </div>
 
                 <!-- Barra de Seleção de Período -->
@@ -237,7 +245,7 @@
         
         let chartInstance = null;
         let currentPeriod = '24h';
-        let currentMetric = 'price'; // 'price' or 'mayer'
+        let currentView = 'btc'; // 'btc', 'xaut' or 'compare'
 
         // --- Preferências salvas (tema e moeda) ---
         function loadPrefs() {
@@ -316,18 +324,6 @@
             return result;
         }
 
-        // Retorna a série da MM200 em valor de preço (não a razão), para sobrepor ao gráfico de preço
-        function calculateSMASeries(pricesArr) {
-            const result = [];
-            for (let i = 0; i < pricesArr.length; i++) {
-                const slice = pricesArr.slice(Math.max(0, i - 199), i + 1);
-                const sum = slice.reduce((acc, curr) => acc + curr[1], 0);
-                const sma = sum / slice.length;
-                result.push({ timestamp: pricesArr[i][0], value: sma });
-            }
-            return result;
-        }
-
         function filterSeries(arr, period) {
             if (!arr || arr.length === 0) return [];
             
@@ -348,7 +344,14 @@
             return arr;
         }
 
-        // --- Comparison Chart Rendering ---
+        // Cor da linha de preço conforme a faixa da MM200 (Mayer Multiple) naquele ponto
+        function colorForMayer(val) {
+            if (val >= 2.0) return '#c15c52';   // vermelho: esticado
+            if (val >= 1.0) return '#eab308';   // amarelo: faixa intermediária
+            return '#5fa87f';                    // verde: abaixo da média
+        }
+
+        // --- Chart Rendering ---
         function renderChart() {
             const ctx = document.getElementById('comparisonChart').getContext('2d');
             const isDark = document.documentElement.classList.contains('dark');
@@ -359,108 +362,81 @@
 
             if (!btcData.length || !xautData.length) return;
 
-            let btcSeries = [];
-            let xautSeries = [];
-            let btcSmaSeries = [];
-            let xautSmaSeries = [];
-
-            if (currentMetric === 'price') {
-                btcSeries = filterSeries(btcData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
-                xautSeries = filterSeries(xautData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
-                btcSmaSeries = filterSeries(calculateSMASeries(btcData), currentPeriod);
-                xautSmaSeries = filterSeries(calculateSMASeries(xautData), currentPeriod);
-            } else {
-                const btcMayer = calculateMayerSeries(btcData);
-                const xautMayer = calculateMayerSeries(xautData);
-                btcSeries = filterSeries(btcMayer, currentPeriod);
-                xautSeries = filterSeries(xautMayer, currentPeriod);
-            }
-
-            const labels = btcSeries.map(item => {
-                const date = new Date(item.timestamp);
-                if (currentPeriod === '24h') {
-                    return date.getHours() + 'h';
-                }
-                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-            });
-
             const btcDefaultColor = '#e08a3e';
-            const xautDefaultColor = '#c9a536';
-            const redColor = '#c15c52';
-            const greenColor = '#5fa87f';
-
-            const getSegmentColor = (defaultColor) => ({
-                borderColor: segmentCtx => {
-                    if (currentMetric !== 'mayer') return defaultColor;
-                    const val = segmentCtx.p1.parsed.y;
-                    if (val >= 2.0) return redColor;
-                    if (val < 1.0) return greenColor;
-                    return defaultColor;
-                }
-            });
-
+            const xautDefaultColor = '#a855f7';
             const currSymbol = selectedCurrency === 'brl' ? 'R$' : '$';
             const localeStr = selectedCurrency === 'brl' ? 'pt-BR' : 'en-US';
 
-            const datasets = [
-                {
-                    label: 'BTC ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
-                    data: btcSeries.map(s => s.value),
-                    borderColor: btcDefaultColor,
-                    backgroundColor: btcDefaultColor,
-                    borderWidth: 1.5,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    yAxisID: 'yBTC',
-                    tension: 0.25,
-                    segment: getSegmentColor(btcDefaultColor)
-                },
-                {
-                    label: 'XAUT ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
-                    data: xautSeries.map(s => s.value),
-                    borderColor: xautDefaultColor,
-                    backgroundColor: xautDefaultColor,
-                    borderWidth: 1.5,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    yAxisID: 'yXAUT',
-                    tension: 0.25,
-                    segment: getSegmentColor(xautDefaultColor)
-                }
-            ];
+            const priceSeriesFor = arr => filterSeries(arr.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
+            const mayerSeriesFor = arr => filterSeries(calculateMayerSeries(arr), currentPeriod);
 
-            // No modo "Preços", sobrepõe a MM200 (média móvel de 200 dias) como referência tracejada
-            if (currentMetric === 'price') {
-                datasets.push({
-                    label: 'BTC MM200 (média)',
-                    data: btcSmaSeries.map(s => s.value),
-                    borderColor: btcDefaultColor + '99',
+            let labels = [];
+            let datasets = [];
+            let singleAxis = false;
+
+            if (currentView === 'compare') {
+                const btcSeries = priceSeriesFor(btcData);
+                const xautSeries = priceSeriesFor(xautData);
+                labels = btcSeries.map(item => item.timestamp);
+                datasets = [
+                    {
+                        label: 'BTC ' + selectedCurrency.toUpperCase(),
+                        data: btcSeries.map(s => s.value),
+                        borderColor: btcDefaultColor,
+                        backgroundColor: btcDefaultColor,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        yAxisID: 'yBTC',
+                        tension: 0.25
+                    },
+                    {
+                        label: 'XAUT ' + selectedCurrency.toUpperCase(),
+                        data: xautSeries.map(s => s.value),
+                        borderColor: xautDefaultColor,
+                        backgroundColor: xautDefaultColor,
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        yAxisID: 'yXAUT',
+                        tension: 0.25
+                    }
+                ];
+            } else {
+                // Visões individuais (BTC ou XAUT): linha contínua colorida pela faixa da MM200
+                singleAxis = true;
+                const rawData = currentView === 'btc' ? btcData : xautData;
+                const assetLabel = currentView === 'btc' ? 'BTC' : 'XAUT';
+                const priceSeries = priceSeriesFor(rawData);
+                const mayerAligned = mayerSeriesFor(rawData); // mesmo índice/tamanho que priceSeries
+
+                labels = priceSeries.map(item => item.timestamp);
+                datasets = [{
+                    label: assetLabel + ' ' + selectedCurrency.toUpperCase(),
+                    data: priceSeries.map(s => s.value),
+                    borderColor: colorForMayer(mayerAligned[0] ? mayerAligned[0].value : 1),
                     backgroundColor: 'transparent',
-                    borderWidth: 1.25,
-                    borderDash: [4, 3],
+                    borderWidth: 2,
                     pointRadius: 0,
-                    pointHoverRadius: 3,
-                    yAxisID: 'yBTC',
-                    tension: 0.25
-                });
-                datasets.push({
-                    label: 'XAUT MM200 (média)',
-                    data: xautSmaSeries.map(s => s.value),
-                    borderColor: xautDefaultColor + '99',
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.25,
-                    borderDash: [4, 3],
-                    pointRadius: 0,
-                    pointHoverRadius: 3,
-                    yAxisID: 'yXAUT',
-                    tension: 0.25
-                });
+                    pointHoverRadius: 4,
+                    yAxisID: 'y',
+                    tension: 0.25,
+                    segment: {
+                        borderColor: segCtx => colorForMayer(mayerAligned[segCtx.p1.dataIndex]?.value ?? 1)
+                    }
+                }];
             }
+
+            const labelToDisplay = ts => {
+                const date = new Date(ts);
+                if (currentPeriod === '24h') return date.getHours() + 'h';
+                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            };
 
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: labels.map(labelToDisplay),
                     datasets: datasets
                 },
                 options: {
@@ -469,7 +445,7 @@
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: {
-                            display: true,
+                            display: currentView === 'compare',
                             position: 'top',
                             align: 'end',
                             labels: {
@@ -487,16 +463,28 @@
                             callbacks: {
                                 label: (ctx) => {
                                     const val = ctx.parsed.y;
-                                    if (currentMetric === 'price') {
-                                        return `${ctx.dataset.label}: ${currSymbol}${val.toLocaleString(localeStr, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                                    } else {
-                                        return `${ctx.dataset.label}: ${val.toFixed(2)}x`;
-                                    }
+                                    return `${ctx.dataset.label}: ${currSymbol}${val.toLocaleString(localeStr, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                                 }
                             }
                         }
                     },
-                    scales: {
+                    scales: singleAxis ? {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 12 }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: gridColor },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'IBM Plex Mono', size: 10 },
+                                callback: (v) => currSymbol + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0))
+                            }
+                        }
+                    } : {
                         x: {
                             grid: { display: false },
                             ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 12 }
@@ -509,7 +497,7 @@
                             ticks: {
                                 color: '#e08a3e',
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => currentMetric === 'price' ? currSymbol + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0)) : v.toFixed(1) + 'x'
+                                callback: (v) => currSymbol + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0))
                             }
                         },
                         yXAUT: {
@@ -518,19 +506,21 @@
                             position: 'right',
                             grid: { drawOnChartArea: false },
                             ticks: {
-                                color: '#c9a536',
+                                color: '#a855f7',
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => currentMetric === 'price' ? currSymbol + v.toFixed(0) : v.toFixed(1) + 'x'
+                                callback: (v) => currSymbol + v.toFixed(0)
                             }
                         }
                     }
                 }
             });
+
+            document.getElementById('chartColorLegend').classList.toggle('hidden', currentView === 'compare');
         }
 
-        function changeMetric(metric, evt) {
-            currentMetric = metric;
-            document.querySelectorAll('.metric-btn').forEach(btn => {
+        function changeView(view, evt) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.classList.remove('active', 'bg-btc', 'text-white');
                 btn.classList.add('text-gray-500', 'dark:text-gray-400');
             });
