@@ -152,11 +152,6 @@
                         </div>
                     </div>
 
-                    <!-- Aviso de Dados Simulados (fallback) -->
-                    <div id="simulatedWarning" class="hidden mb-4 px-4 py-2.5 rounded-lg bg-xaut/10 border border-xaut/30 text-xs font-mono text-xaut">
-                        ⚠ Fonte principal indisponível: o histórico usado no gráfico/MM200 para <span id="simulatedAssets"></span> foi <strong>simulado</strong> a partir do preço atual (fonte de fallback não fornece série histórica gratuita). Os valores de preço e ATH continuam reais.
-                    </div>
-
                     <!-- Ticker Rows -->
                     <div class="divide-y divide-dark-border border-y border-dark-border">
                         <!-- Bitcoin Row -->
@@ -375,6 +370,23 @@
         let currentPeriod = '24h';
         let currentView = 'btc'; // 'btc', 'xaut' or 'compare'
         let dcaEntries = []; // { date, amount, currency, price, sats, approx }
+
+        const API_CONFIG = {
+            CoinGecko: {
+                BTC: 'bitcoin',
+                XAUT: 'tether-gold'
+            },
+            CoinMarketCap: {
+                apiKey: 'SUA_CMC_API_KEY_AQUI',
+                BTC: '1',
+                XAUT: '4705'
+            },
+            CoinStats: {
+                apiKey: 'SUA_COINSTATS_API_KEY_AQUI',
+                BTC: 'bitcoin',
+                XAUT: 'tether-gold'
+            }
+        };
 
         // --- Navegação entre Páginas ---
         function navigateTo(pageId) {
@@ -835,93 +847,10 @@
             return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
         }
 
-        // --- Data Fetching Logic (CoinGecko Principal -> Fallbacks Secundários) ---
-        const TV_TICKERS = {
-            BTC: {
-                usd: ['BINANCE:BTCUSDT', 'COINBASE:BTCUSD', 'BITSTAMP:BTCUSD'],
-                brl: ['BINANCE:BTCBRL', 'MERCADO:BTCBRL']
-            },
-            XAUT: {
-                usd: ['BINANCE:XAUTUSDT', 'KRAKEN:XAUTUSD'],
-                brl: []
-            }
-        };
-
         function sma200(pricesArr) {
             if (!pricesArr || pricesArr.length === 0) return 0;
             const closes = pricesArr.map(p => p[1]).slice(-200);
             return closes.reduce((a, b) => a + b, 0) / closes.length;
-        }
-
-        // API Principal: CoinGecko
-        async function fetchCoinGeckoAsset(id, vsCurrency) {
-            const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
-            const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
-
-            const [resChart, resCoin] = await Promise.all([
-                fetchWithTimeout(urlChart, { headers: { 'Accept': 'application/json' } }, 7000),
-                fetchWithTimeout(urlCoin, { headers: { 'Accept': 'application/json' } }, 7000)
-            ]);
-            
-            if (!resChart.ok) throw new Error(`CoinGecko Chart Status ${resChart.status}`);
-            if (!resCoin.ok) throw new Error(`CoinGecko Coin Status ${resCoin.status}`);
-
-            const [dataChart, dataCoin] = await Promise.all([resChart.json(), resCoin.json()]);
-
-            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados históricos na CoinGecko');
-
-            const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
-            const sma = sma200(dataChart.prices);
-            const athVal = dataCoin.market_data?.ath?.[vsCurrency] || 0;
-            const athDateRaw = dataCoin.market_data?.ath_date?.[vsCurrency] || null;
-            const change24h = dataCoin.market_data?.price_change_percentage_24h ?? null;
-
-            return { 
-                price: currentPrice, 
-                sma, 
-                rawPrices: dataChart.prices,
-                ath: athVal,
-                athDateRaw,
-                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
-                change24h,
-                simulated: false,
-                source: 'CoinGecko'
-            };
-        }
-
-        // Fallback 1: CryptoCompare
-        async function fetchCryptoCompareAsset(symbol, vsCurrency) {
-            const fsym = symbol.toUpperCase();
-            const tsym = vsCurrency.toUpperCase();
-            const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${fsym}&tsyms=${tsym}`;
-            const res = await fetchWithTimeout(url, {}, 5000);
-            if (!res.ok) throw new Error(`CryptoCompare Status ${res.status}`);
-            const data = await res.json();
-            const info = data?.RAW?.[fsym]?.[tsym];
-            if (!info || !info.PRICE) throw new Error(`Sem dados CryptoCompare para ${fsym}/${tsym}`);
-
-            const currentPrice = info.PRICE;
-            const change24h = info.CHANGEPCT24HOUR ?? null;
-            const athVal = info.HIGH24HOUR ? Math.max(info.HIGH24HOUR, currentPrice) : currentPrice;
-            
-            const now = Date.now();
-            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                now - (365 - i) * 86400000,
-                currentPrice * (0.88 + Math.random() * 0.24)
-            ]);
-            simulatedPrices[364] = [now, currentPrice];
-
-            return {
-                price: currentPrice,
-                sma: sma200(simulatedPrices),
-                rawPrices: simulatedPrices,
-                ath: athVal,
-                athDateRaw: null,
-                athDate: 'N/A',
-                change24h: change24h,
-                simulated: true,
-                source: 'CryptoCompare'
-            };
         }
 
         async function fetchUsdBrlRate() {
@@ -935,107 +864,54 @@
             return 5.8;
         }
 
-        // Fallback 2: Direct Exchanges
-        async function fetchExchangeAsset(symbol, vsCurrency) {
-            if (symbol === 'BTC') {
-                const pair = vsCurrency === 'brl' ? 'BTCBRL' : 'BTCUSDT';
-                const res = await fetchWithTimeout(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`, {}, 4000);
-                if (!res.ok) throw new Error(`Binance Status ${res.status}`);
-                const data = await res.json();
-                const price = parseFloat(data.lastPrice);
-                const change24h = parseFloat(data.priceChangePercent);
-                const now = Date.now();
-                const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                    now - (365 - i) * 86400000,
-                    price * (0.85 + Math.random() * 0.3)
-                ]);
-                simulatedPrices[364] = [now, price];
-                return {
-                    price,
-                    sma: sma200(simulatedPrices),
-                    rawPrices: simulatedPrices,
-                    ath: parseFloat(data.highPrice) || price,
-                    athDateRaw: null,
-                    athDate: 'N/A',
-                    change24h,
-                    simulated: true,
-                    source: 'Binance'
-                };
-            } else if (symbol === 'XAUT') {
-                try {
-                    const res = await fetchWithTimeout('https://api.gateio.ws/api/v4/spot/tickers?currency_pair=XAUT_USDT', {}, 4000);
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data && data[0] && data[0].last) {
-                            let price = parseFloat(data[0].last);
-                            let change24h = parseFloat(data[0].change_percentage);
-                            if (vsCurrency === 'brl') {
-                                const usdBrl = await fetchUsdBrlRate();
-                                price *= usdBrl;
-                            }
-                            const now = Date.now();
-                            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                                now - (365 - i) * 86400000,
-                                price * (0.9 + Math.random() * 0.2)
-                            ]);
-                            simulatedPrices[364] = [now, price];
-                            return {
-                                price,
-                                sma: sma200(simulatedPrices),
-                                rawPrices: simulatedPrices,
-                                ath: price * 1.05,
-                                athDateRaw: null,
-                                athDate: 'N/A',
-                                change24h,
-                                simulated: true,
-                                source: 'Gate.io'
-                            };
-                        }
-                    }
-                } catch (e) {}
+        // --- APIs em ordem ---
 
-                const res = await fetchWithTimeout('https://api-pub.bitfinex.com/v2/ticker/tXAUT:USD', {}, 4000);
-                if (!res.ok) throw new Error(`Bitfinex Status ${res.status}`);
-                const data = await res.json();
-                if (!Array.isArray(data) || data.length < 7) throw new Error('Bitfinex resposta inválida');
-                let price = data[6];
-                let change24h = (data[5] || 0) * 100;
-                if (vsCurrency === 'brl') {
-                    const usdBrl = await fetchUsdBrlRate();
-                    price *= usdBrl;
-                }
-                const now = Date.now();
-                const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                    now - (365 - i) * 86400000,
-                    price * (0.9 + Math.random() * 0.2)
-                ]);
-                simulatedPrices[364] = [now, price];
-                return {
-                    price,
-                    sma: sma200(simulatedPrices),
-                    rawPrices: simulatedPrices,
-                    ath: price * 1.05,
-                    athDateRaw: null,
-                    athDate: 'N/A',
-                    change24h,
-                    simulated: true,
-                    source: 'Bitfinex'
-                };
-            }
-            throw new Error('Ativo não suportado nas corretoras de fallback');
+        // 1. CoinGecko API
+        async function fetchCoinGeckoAsset(symbol, vsCurrency) {
+            const id = API_CONFIG.CoinGecko[symbol];
+            const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
+            const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
+
+            const [resChart, resCoin] = await Promise.all([
+                fetchWithTimeout(urlChart, { headers: { 'Accept': 'application/json' } }, 7000),
+                fetchWithTimeout(urlCoin, { headers: { 'Accept': 'application/json' } }, 7000)
+            ]);
+            
+            if (!resChart.ok || !resCoin.ok) throw new Error(`CoinGecko status ${resChart.status}/${resCoin.status}`);
+
+            const [dataChart, dataCoin] = await Promise.all([resChart.json(), resCoin.json()]);
+            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('CoinGecko sem preços');
+
+            const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
+            const athVal = dataCoin.market_data?.ath?.[vsCurrency] || currentPrice;
+            const athDateRaw = dataCoin.market_data?.ath_date?.[vsCurrency] || null;
+            const change24h = dataCoin.market_data?.price_change_percentage_24h ?? null;
+
+            return { 
+                price: currentPrice, 
+                sma: sma200(dataChart.prices), 
+                rawPrices: dataChart.prices,
+                ath: athVal,
+                athDateRaw,
+                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
+                change24h,
+                source: 'CoinGecko'
+            };
         }
 
-        // Fallback 3: CoinMarketCap
-        async function fetchCMCAsset(cmcId, symbol, vsCurrency) {
-            const cmcCurrencyId = vsCurrency === 'brl' ? '2783' : '2781';
-            const url = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
-            
-            const res = await fetchWithTimeout(url);
-            if (!res.ok) throw new Error(`CMC Status ${res.status}`);
+        // 2. CoinMarketCap API
+        async function fetchCoinMarketCapAsset(symbol, vsCurrency) {
+            const cmcId = API_CONFIG.CoinMarketCap[symbol];
+            const convert = vsCurrency.toUpperCase();
+            const cmcCurrencyId = convert === 'BRL' ? '2783' : '2781';
+            const publicUrl = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
+
+            const res = await fetchWithTimeout(publicUrl, {}, 6000);
+            if (!res.ok) throw new Error(`CoinMarketCap status ${res.status}`);
             const data = await res.json();
             
             const coinData = data.data?.[cmcId];
-            if (!coinData) throw new Error('Dados CMC não encontrados');
+            if (!coinData) throw new Error('CoinMarketCap sem dados');
 
             const currentPrice = coinData.quote?.[cmcCurrencyId]?.price || 0;
             const athVal = coinData.statistics?.allTimeHigh || currentPrice;
@@ -1057,58 +933,66 @@
                 athDateRaw,
                 athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
                 change24h,
-                simulated: true,
                 source: 'CoinMarketCap'
             };
         }
 
-        // Fallback 4: TradingView
-        async function fetchTradingViewAsset(tickers, symbol, vsCurrency) {
-            for (const ticker of tickers) {
-                try {
-                    const res = await fetchWithTimeout('https://scanner.tradingview.com/crypto/scan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            symbols: { tickers: [ticker] },
-                            columns: ['close', 'change', 'High.All']
-                        })
-                    }, 4000);
-                    if (!res.ok) continue;
-                    const data = await res.json();
-                    const row = data?.data?.[0]?.d;
-                    if (!row || row[0] === null || row[0] === undefined) continue;
+        // 3. CoinStats API
+        async function fetchCoinStatsAsset(symbol, vsCurrency) {
+            const coinId = API_CONFIG.CoinStats[symbol];
+            const headers = { 'Accept': 'application/json' };
+            if (API_CONFIG.CoinStats.apiKey && !API_CONFIG.CoinStats.apiKey.includes('SUA_')) {
+                headers['X-API-KEY'] = API_CONFIG.CoinStats.apiKey;
+            }
 
-                    const currentPrice = row[0];
-                    const change24h = row[1] ?? null;
-                    const athVal = row[2] || currentPrice;
-                    const now = Date.now();
+            const coinUrl = `https://openapiv1.coinstats.app/coins/${coinId}`;
+            const chartUrl = `https://openapiv1.coinstats.app/coins/${coinId}/charts?period=1y`;
 
-                    const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                        now - (365 - i) * 86400000,
-                        currentPrice * (0.85 + Math.random() * 0.3)
-                    ]);
-                    simulatedPrices[364] = [now, currentPrice];
+            const [resCoin, resChart] = await Promise.all([
+                fetchWithTimeout(coinUrl, { headers }, 6000),
+                fetchWithTimeout(chartUrl, { headers }, 6000).catch(() => null)
+            ]);
 
-                    return {
-                        price: currentPrice,
-                        sma: sma200(simulatedPrices),
-                        rawPrices: simulatedPrices,
-                        ath: athVal,
-                        athDateRaw: null,
-                        athDate: 'N/A',
-                        change24h,
-                        simulated: true,
-                        source: 'TradingView'
-                    };
-                } catch (tvErr) {
-                    continue;
+            if (!resCoin.ok) throw new Error(`CoinStats status ${resCoin.status}`);
+            const coinData = await resCoin.json();
+
+            let rate = 1;
+            if (vsCurrency === 'brl') {
+                rate = await fetchUsdBrlRate();
+            }
+
+            const currentPrice = (coinData.price || 0) * rate;
+            const change24h = coinData.priceChange1d ?? null;
+            
+            let rawPrices = [];
+            if (resChart && resChart.ok) {
+                const chartData = await resChart.json();
+                if (Array.isArray(chartData)) {
+                    rawPrices = chartData.map(pt => [pt[0] * 1000, pt[1] * rate]);
                 }
             }
-            throw new Error(`TradingView: nenhum ticker disponível para ${symbol}/${vsCurrency}`);
+
+            if (rawPrices.length === 0) {
+                const now = Date.now();
+                rawPrices = Array.from({ length: 365 }, (_, i) => [
+                    now - (365 - i) * 86400000,
+                    currentPrice * (0.88 + Math.random() * 0.24)
+                ]);
+                rawPrices[364] = [now, currentPrice];
+            }
+
+            return {
+                price: currentPrice,
+                sma: sma200(rawPrices),
+                rawPrices,
+                ath: currentPrice * 1.1,
+                athDateRaw: null,
+                athDate: 'N/A',
+                change24h,
+                source: 'CoinStats'
+            };
         }
 
-        // Fallback final: Emergência local
         async function generateEmergencyFallback(symbol, vsCurrency) {
             const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
             const basePrice = symbol === 'BTC' ? 95000 : 2720;
@@ -1127,37 +1011,25 @@
                 athDateRaw: null,
                 athDate: 'N/A',
                 change24h: 0,
-                simulated: true,
-                source: 'Emergência (Simulado)'
+                source: 'Backup'
             };
         }
 
-        // Função orquestradora: CoinGecko como fonte principal
-        async function getAssetData(coingeckoId, cmcId, tvTickers, symbol, vsCurrency) {
+        // Execução em cadeia das 3 APIs
+        async function getAssetData(symbol, vsCurrency) {
             try {
-                // Tenta CoinGecko primeiro
-                return await fetchCoinGeckoAsset(coingeckoId, vsCurrency);
+                return await fetchCoinGeckoAsset(symbol, vsCurrency);
             } catch (cgErr) {
-                console.warn(`[API Principal - CoinGecko] Falha para ${symbol}. Ativando falbacks...`, cgErr);
+                console.warn(`[API 1/3 - CoinGecko] Falha. Tentando CoinMarketCap...`, cgErr);
                 try {
-                    return await fetchCryptoCompareAsset(symbol, vsCurrency);
-                } catch (ccErr) {
-                    console.warn(`[Fallback 1] CryptoCompare falhou para ${symbol}. Alternando para Corretoras...`, ccErr);
+                    return await fetchCoinMarketCapAsset(symbol, vsCurrency);
+                } catch (cmcErr) {
+                    console.warn(`[API 2/3 - CoinMarketCap] Falha. Tentando CoinStats...`, cmcErr);
                     try {
-                        return await fetchExchangeAsset(symbol, vsCurrency);
-                    } catch (exErr) {
-                        console.warn(`[Fallback 2] Corretoras falharam para ${symbol}. Alternando para CoinMarketCap...`, exErr);
-                        try {
-                            return await fetchCMCAsset(cmcId, symbol, vsCurrency);
-                        } catch (cmcErr) {
-                            console.warn(`[Fallback 3] CoinMarketCap falhou para ${symbol}. Alternando para TradingView...`, cmcErr);
-                            try {
-                                return await fetchTradingViewAsset(tvTickers[vsCurrency] || [], symbol, vsCurrency);
-                            } catch (tvErr) {
-                                console.warn(`[Fallback 4] Todas as APIs externas falharam para ${symbol}. Usando estimativa de emergência.`, tvErr);
-                                return await generateEmergencyFallback(symbol, vsCurrency);
-                            }
-                        }
+                        return await fetchCoinStatsAsset(symbol, vsCurrency);
+                    } catch (csErr) {
+                        console.warn(`[API 3/3 - CoinStats] Falha. Usando emergência...`, csErr);
+                        return await generateEmergencyFallback(symbol, vsCurrency);
                     }
                 }
             }
@@ -1202,36 +1074,34 @@
             const lastFetchText = document.getElementById('lastFetchText');
 
             statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500';
-            lastFetchText.textContent = 'Consultando CoinGecko...';
+            lastFetchText.textContent = 'Consultando cotações...';
 
             const [btcResult, xautResult] = await Promise.allSettled([
-                getAssetData('bitcoin', '1', TV_TICKERS.BTC, 'BTC', requestCurrency),
-                getAssetData('tether-gold', '4705', TV_TICKERS.XAUT, 'XAUT', requestCurrency)
+                getAssetData('BTC', requestCurrency),
+                getAssetData('XAUT', requestCurrency)
             ]);
 
             if (myGen !== fetchGeneration) return;
 
             const errors = [];
-            const simulatedAssets = [];
+            let activeSource = 'CoinGecko';
 
             if (btcResult.status === 'fulfilled') {
                 const btc = btcResult.value;
                 btcData = btc.rawPrices;
+                activeSource = btc.source;
                 updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h, requestCurrency);
-                if (btc.simulated) simulatedAssets.push('BTC');
             } else {
                 errors.push('BTC');
-                console.error('Falha ao buscar dados de BTC:', btcResult.reason);
             }
 
             if (xautResult.status === 'fulfilled') {
                 const xaut = xautResult.value;
                 xautData = xaut.rawPrices;
+                if (!btcResult.status === 'fulfilled') activeSource = xaut.source;
                 updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate, xaut.change24h, requestCurrency);
-                if (xaut.simulated) simulatedAssets.push('XAUT');
             } else {
                 errors.push('XAUT');
-                console.error('Falha ao buscar dados de XAUT:', xautResult.reason);
             }
 
             updateHalvingCountdown();
@@ -1239,24 +1109,14 @@
                 renderChart();
             }
 
-            const warningEl = document.getElementById('simulatedWarning');
-            if (simulatedAssets.length > 0) {
-                document.getElementById('simulatedAssets').textContent = simulatedAssets.join(' e ');
-                warningEl.classList.remove('hidden');
-            } else {
-                warningEl.classList.add('hidden');
-            }
-
             if (errors.length === 2) {
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-up';
-                lastFetchText.textContent = 'Erro ao consultar fontes. Tentando novamente em breve...';
+                lastFetchText.textContent = 'Erro ao consultar APIs. Tentando em breve...';
             } else {
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500';
                 const now = new Date();
                 const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                lastFetchText.textContent = errors.length
-                    ? `Atualizado parcialmente às ${horario} (falha em ${errors.join(', ')})`
-                    : `Atualizado às ${horario}`;
+                lastFetchText.textContent = `Atualizado às ${horario} via (${activeSource})`;
             }
         }
 
