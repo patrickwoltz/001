@@ -381,7 +381,6 @@
             if (!['overview', 'comparativo', 'calculadora'].includes(pageId)) return;
             activePage = pageId;
 
-            // Esconde todas as páginas e desativa abas
             document.querySelectorAll('.page-view').forEach(el => {
                 el.classList.remove('active');
             });
@@ -392,27 +391,23 @@
                 btn.classList.remove('text-btc', 'font-semibold');
             });
 
-            // Ativa a página alvo
             const targetPage = document.getElementById(`page-${pageId}`);
             if (targetPage) {
                 targetPage.classList.add('active');
             }
 
-            // Destaca botões de navegação no header e footer
             const headerBtn = document.getElementById(`nav-${pageId}`);
             if (headerBtn) headerBtn.classList.add('active');
 
             const footerBtn = document.getElementById(`footer-nav-${pageId}`);
             if (footerBtn) footerBtn.classList.add('text-btc', 'font-semibold');
 
-            // Redimensiona o gráfico se o usuário navegar para o Comparativo
             if (pageId === 'comparativo') {
                 setTimeout(() => {
                     renderChart();
                 }, 50);
             }
 
-            // Scroll suave para o topo ao trocar de página
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -421,7 +416,7 @@
             try {
                 const savedCurr = localStorage.getItem('btcTracker.currency');
                 if (savedCurr === 'brl' || savedCurr === 'usd') selectedCurrency = savedCurr;
-            } catch (e) { /* localStorage indisponível */ }
+            } catch (e) {}
         }
 
         // --- Currency Switcher ---
@@ -511,9 +506,9 @@
         }
 
         function colorForMayer(val) {
-            if (val >= 2.0) return '#c15c52';   // vermelho: esticado
-            if (val >= 1.0) return '#eab308';   // amarelo: faixa intermediária
-            return '#5fa87f';                    // verde: abaixo da média
+            if (val >= 2.0) return '#c15c52';   // vermelho
+            if (val >= 1.0) return '#eab308';   // amarelo
+            return '#5fa87f';                    // verde
         }
 
         // --- Chart Rendering ---
@@ -840,7 +835,7 @@
             return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
         }
 
-        // --- Data Fetching Logic (CoinGecko -> CryptoCompare -> Exchange -> CMC -> TV) ---
+        // --- Data Fetching Logic (CoinGecko Principal -> Fallbacks Secundários) ---
         const TV_TICKERS = {
             BTC: {
                 usd: ['BINANCE:BTCUSDT', 'COINBASE:BTCUSD', 'BITSTAMP:BTCUSD'],
@@ -858,20 +853,22 @@
             return closes.reduce((a, b) => a + b, 0) / closes.length;
         }
 
+        // API Principal: CoinGecko
         async function fetchCoinGeckoAsset(id, vsCurrency) {
             const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
             const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
 
             const [resChart, resCoin] = await Promise.all([
-                fetchWithTimeout(urlChart),
-                fetchWithTimeout(urlCoin)
+                fetchWithTimeout(urlChart, { headers: { 'Accept': 'application/json' } }, 7000),
+                fetchWithTimeout(urlCoin, { headers: { 'Accept': 'application/json' } }, 7000)
             ]);
+            
             if (!resChart.ok) throw new Error(`CoinGecko Chart Status ${resChart.status}`);
             if (!resCoin.ok) throw new Error(`CoinGecko Coin Status ${resCoin.status}`);
 
             const [dataChart, dataCoin] = await Promise.all([resChart.json(), resCoin.json()]);
 
-            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados CoinGecko');
+            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados históricos na CoinGecko');
 
             const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
             const sma = sma200(dataChart.prices);
@@ -892,6 +889,7 @@
             };
         }
 
+        // Fallback 1: CryptoCompare
         async function fetchCryptoCompareAsset(symbol, vsCurrency) {
             const fsym = symbol.toUpperCase();
             const tsym = vsCurrency.toUpperCase();
@@ -934,9 +932,10 @@
                     if (data?.USDBRL?.bid) return parseFloat(data.USDBRL.bid);
                 }
             } catch (e) {}
-            return 5.8; // Fallback para cotação USD/BRL
+            return 5.8;
         }
 
+        // Fallback 2: Direct Exchanges
         async function fetchExchangeAsset(symbol, vsCurrency) {
             if (symbol === 'BTC') {
                 const pair = vsCurrency === 'brl' ? 'BTCBRL' : 'BTCUSDT';
@@ -1023,32 +1022,10 @@
                     source: 'Bitfinex'
                 };
             }
-            throw new Error('Ativo não suportado em corretoras');
+            throw new Error('Ativo não suportado nas corretoras de fallback');
         }
 
-        async function generateEmergencyFallback(symbol, vsCurrency) {
-            const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
-            const basePrice = symbol === 'BTC' ? 95000 : 2720;
-            const price = basePrice * usdRate;
-            const now = Date.now();
-            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
-                now - (365 - i) * 86400000,
-                price * (0.85 + Math.random() * 0.3)
-            ]);
-            simulatedPrices[364] = [now, price];
-            return {
-                price,
-                sma: sma200(simulatedPrices),
-                rawPrices: simulatedPrices,
-                ath: price * 1.1,
-                athDateRaw: null,
-                athDate: 'N/A',
-                change24h: 0,
-                simulated: true,
-                source: 'Emergência (Simulado)'
-            };
-        }
-
+        // Fallback 3: CoinMarketCap
         async function fetchCMCAsset(cmcId, symbol, vsCurrency) {
             const cmcCurrencyId = vsCurrency === 'brl' ? '2783' : '2781';
             const url = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
@@ -1085,6 +1062,7 @@
             };
         }
 
+        // Fallback 4: TradingView
         async function fetchTradingViewAsset(tickers, symbol, vsCurrency) {
             for (const ticker of tickers) {
                 try {
@@ -1130,27 +1108,53 @@
             throw new Error(`TradingView: nenhum ticker disponível para ${symbol}/${vsCurrency}`);
         }
 
+        // Fallback final: Emergência local
+        async function generateEmergencyFallback(symbol, vsCurrency) {
+            const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
+            const basePrice = symbol === 'BTC' ? 95000 : 2720;
+            const price = basePrice * usdRate;
+            const now = Date.now();
+            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                now - (365 - i) * 86400000,
+                price * (0.85 + Math.random() * 0.3)
+            ]);
+            simulatedPrices[364] = [now, price];
+            return {
+                price,
+                sma: sma200(simulatedPrices),
+                rawPrices: simulatedPrices,
+                ath: price * 1.1,
+                athDateRaw: null,
+                athDate: 'N/A',
+                change24h: 0,
+                simulated: true,
+                source: 'Emergência (Simulado)'
+            };
+        }
+
+        // Função orquestradora: CoinGecko como fonte principal
         async function getAssetData(coingeckoId, cmcId, tvTickers, symbol, vsCurrency) {
             try {
+                // Tenta CoinGecko primeiro
                 return await fetchCoinGeckoAsset(coingeckoId, vsCurrency);
             } catch (cgErr) {
-                console.warn(`[Fallback] CoinGecko falhou para ${symbol}. Alternando para CryptoCompare...`, cgErr);
+                console.warn(`[API Principal - CoinGecko] Falha para ${symbol}. Ativando falbacks...`, cgErr);
                 try {
                     return await fetchCryptoCompareAsset(symbol, vsCurrency);
                 } catch (ccErr) {
-                    console.warn(`[Fallback] CryptoCompare falhou para ${symbol}. Alternando para Corretoras...`, ccErr);
+                    console.warn(`[Fallback 1] CryptoCompare falhou para ${symbol}. Alternando para Corretoras...`, ccErr);
                     try {
                         return await fetchExchangeAsset(symbol, vsCurrency);
                     } catch (exErr) {
-                        console.warn(`[Fallback] Corretoras falharam para ${symbol}. Alternando para CoinMarketCap...`, exErr);
+                        console.warn(`[Fallback 2] Corretoras falharam para ${symbol}. Alternando para CoinMarketCap...`, exErr);
                         try {
                             return await fetchCMCAsset(cmcId, symbol, vsCurrency);
                         } catch (cmcErr) {
-                            console.warn(`[Fallback] CoinMarketCap falhou para ${symbol}. Alternando para TradingView...`, cmcErr);
+                            console.warn(`[Fallback 3] CoinMarketCap falhou para ${symbol}. Alternando para TradingView...`, cmcErr);
                             try {
                                 return await fetchTradingViewAsset(tvTickers[vsCurrency] || [], symbol, vsCurrency);
                             } catch (tvErr) {
-                                console.warn(`[Fallback] Todas as fontes externas falharam para ${symbol}. Usando estimativa de emergência.`, tvErr);
+                                console.warn(`[Fallback 4] Todas as APIs externas falharam para ${symbol}. Usando estimativa de emergência.`, tvErr);
                                 return await generateEmergencyFallback(symbol, vsCurrency);
                             }
                         }
@@ -1198,7 +1202,7 @@
             const lastFetchText = document.getElementById('lastFetchText');
 
             statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500';
-            lastFetchText.textContent = 'Consultando fontes de mercado...';
+            lastFetchText.textContent = 'Consultando CoinGecko...';
 
             const [btcResult, xautResult] = await Promise.allSettled([
                 getAssetData('bitcoin', '1', TV_TICKERS.BTC, 'BTC', requestCurrency),
@@ -1245,7 +1249,7 @@
 
             if (errors.length === 2) {
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-up';
-                lastFetchText.textContent = 'Erro ao consultar todas as fontes. Tentando novamente em breve...';
+                lastFetchText.textContent = 'Erro ao consultar fontes. Tentando novamente em breve...';
             } else {
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500';
                 const now = new Date();
