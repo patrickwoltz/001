@@ -66,7 +66,6 @@
     <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
         <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-end">
             <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
-                <!-- Ícones simples ou texto limpo -->
                 <span class="dark:hidden">Modo Escuro</span>
                 <span class="hidden dark:inline">Modo Claro</span>
             </button>
@@ -81,8 +80,8 @@
                 <!-- Masthead Status -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-gray-200 dark:border-dark-border gap-4">
                     <div>
-                        <span class="text-xs font-mono text-btc tracking-widest uppercase block">Tracking</span>
-                        <h2 class="text-xl font-serif mt-1">BTC vs XAUt</h2>
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase block">Métricas Globais</span>
+                        <h2 class="text-xl font-serif mt-1">BTC &amp; Tether Gold vs. MM200</h2>
                     </div>
                     
                     <div class="flex flex-col sm:items-end gap-1">
@@ -144,30 +143,37 @@
             </div>
         </section>
 
-        <!-- Seção Cotação, Gráfico e Conversor -->
+        <!-- Seção Cotação, Gráfico de Comparação e Conversor -->
         <section id="cotacao" class="border-t border-gray-100 dark:border-dark-border py-24 bg-gray-50/50 dark:bg-dark-800/20">
             <div class="max-w-5xl mx-auto px-6">
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
                     <div>
                         <span class="text-xs font-mono text-btc tracking-widest uppercase">01 / Mercado</span>
-                        <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Desempenho &amp; Conversão</h2>
+                        <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Comparativo BTC vs. XAUT</h2>
                     </div>
                     
-                    <!-- Clean Period Filters -->
-                    <div class="flex space-x-6 text-xs font-mono text-gray-400 mt-4 md:mt-0">
-                        <button onclick="changeChartPeriod('24h', event)" class="chart-btn active text-btc underline underline-offset-8">24H</button>
-                        <button onclick="changeChartPeriod('7d', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">7D</button>
-                        <button onclick="changeChartPeriod('1m', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1M</button>
-                        <button onclick="changeChartPeriod('1a', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1A</button>
+                    <div class="flex flex-wrap items-center gap-6 text-xs font-mono text-gray-400">
+                        <!-- Mode Selector -->
+                        <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded">
+                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1 rounded text-white bg-btc transition">Preços</button>
+                            <button onclick="changeMetric('mayer', event)" class="metric-btn px-3 py-1 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition">Múltiplo MM200</button>
+                        </div>
+
+                        <!-- Clean Period Filters -->
+                        <div class="flex space-x-4">
+                            <button onclick="changeChartPeriod('7d', event)" class="chart-btn text-gray-400 hover:text-gray-900 dark:hover:text-white transition">7D</button>
+                            <button onclick="changeChartPeriod('1m', event)" class="chart-btn text-gray-400 hover:text-gray-900 dark:hover:text-white transition">1M</button>
+                            <button onclick="changeChartPeriod('200d', event)" class="chart-btn active text-btc underline underline-offset-8">200D</button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="grid lg:grid-cols-12 gap-12 items-center">
                     
-                    <!-- Clean Line Chart -->
+                    <!-- Comparison Line Chart -->
                     <div class="lg:col-span-7">
-                        <div class="h-64 w-full">
-                            <canvas id="btcChart"></canvas>
+                        <div class="h-72 w-full">
+                            <canvas id="comparisonChart"></canvas>
                         </div>
                     </div>
 
@@ -211,14 +217,17 @@
         </div>
     </footer>
 
-    <!-- Logic Script Integration with CoinGecko -->
+    <!-- Logic Script -->
     <script>
-        // Global variables for live prices
         let btcPriceUsd = 0;
         let usdRateBrl = 5.60; 
-        let btcHistoricalPrices = [];
-        let btcChartInstance = null;
-        let currentPeriod = '24h';
+        
+        let btcData = [];
+        let xautData = [];
+        
+        let chartInstance = null;
+        let currentPeriod = '200d';
+        let currentMetric = 'price'; // 'price' or 'mayer'
 
         // --- Dark Mode Switcher ---
         const themeToggleBtn = document.getElementById('themeToggle');
@@ -259,66 +268,115 @@
         calcBrl.addEventListener('input', updateFromBrl);
         calcUsd.addEventListener('input', updateFromUsd);
 
-        // --- Chart rendering ---
-        function filterDataForPeriod(prices, period) {
-            if (!prices || prices.length === 0) return { labels: [], data: [] };
-            
-            let sliced = [];
-            if (period === '24h') sliced = prices.slice(-24);
-            else if (period === '7d') sliced = prices.slice(-7);
-            else if (period === '1m') sliced = prices.slice(-30);
-            else sliced = prices;
-
-            const labels = sliced.map(p => {
-                const date = new Date(p[0]);
-                if (period === '24h') return date.getHours() + 'h';
-                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-            });
-
-            const data = sliced.map(p => p[1]);
-            return { labels, data };
+        // --- Calculation Helpers ---
+        function calculateMayerSeries(pricesArr) {
+            const result = [];
+            for (let i = 0; i < pricesArr.length; i++) {
+                const slice = pricesArr.slice(0, i + 1);
+                const sum = slice.reduce((acc, curr) => acc + curr[1], 0);
+                const sma = sum / slice.length;
+                const currentPrice = pricesArr[i][1];
+                const mayerMultiple = sma > 0 ? (currentPrice / sma) : 1;
+                result.push({ timestamp: pricesArr[i][0], value: mayerMultiple });
+            }
+            return result;
         }
 
+        function filterSeries(arr, period) {
+            if (!arr || arr.length === 0) return [];
+            if (period === '7d') return arr.slice(-7);
+            if (period === '1m') return arr.slice(-30);
+            return arr;
+        }
+
+        // --- Comparison Chart Rendering ---
         function renderChart() {
-            const ctx = document.getElementById('btcChart').getContext('2d');
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor = isDark ? '#22262f' : '#f0f0f0';
             const textColor = isDark ? '#5c6270' : '#a3a3a3';
 
-            if (btcChartInstance) btcChartInstance.destroy();
+            if (chartInstance) chartInstance.destroy();
 
-            const { labels, data } = filterDataForPeriod(btcHistoricalPrices, currentPeriod);
+            if (!btcData.length || !xautData.length) return;
 
-            btcChartInstance = new Chart(ctx, {
+            let btcSeries = [];
+            let xautSeries = [];
+
+            if (currentMetric === 'price') {
+                btcSeries = filterSeries(btcData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
+                xautSeries = filterSeries(xautData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
+            } else {
+                const btcMayer = calculateMayerSeries(btcData);
+                const xautMayer = calculateMayerSeries(xautData);
+                btcSeries = filterSeries(btcMayer, currentPeriod);
+                xautSeries = filterSeries(xautMayer, currentPeriod);
+            }
+
+            const labels = btcSeries.map(item => {
+                const date = new Date(item.timestamp);
+                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            });
+
+            chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        data: data,
-                        borderColor: '#e08a3e',
-                        borderWidth: 1.5,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                        pointHoverBackgroundColor: '#e08a3e',
-                        tension: 0.25
-                    }]
+                    datasets: [
+                        {
+                            label: 'BTC ' + (currentMetric === 'price' ? 'USD' : 'Múltiplo MM200'),
+                            data: btcSeries.map(s => s.value),
+                            borderColor: '#e08a3e',
+                            backgroundColor: '#e08a3e',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            yAxisID: 'yBTC',
+                            tension: 0.25
+                        },
+                        {
+                            label: 'XAUT ' + (currentMetric === 'price' ? 'USD' : 'Múltiplo MM200'),
+                            data: xautSeries.map(s => s.value),
+                            borderColor: '#c9a536',
+                            backgroundColor: '#c9a536',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            yAxisID: 'yXAUT',
+                            tension: 0.25
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: textColor,
+                                font: { family: 'IBM Plex Mono', size: 10 },
+                                boxWidth: 12
+                            }
+                        },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            displayColors: false,
                             backgroundColor: isDark ? '#0e1117' : '#ffffff',
                             titleColor: isDark ? '#8890a0' : '#525252',
-                            bodyColor: '#e08a3e',
+                            bodyColor: isDark ? '#ffffff' : '#000000',
                             borderColor: gridColor,
                             borderWidth: 1,
                             callbacks: {
-                                label: (ctx) => `$ ${ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                label: (ctx) => {
+                                    const val = ctx.parsed.y;
+                                    if (currentMetric === 'price') {
+                                        return `${ctx.dataset.label}: $${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                    } else {
+                                        return `${ctx.dataset.label}: ${val.toFixed(2)}x`;
+                                    }
+                                }
                             }
                         }
                     },
@@ -327,12 +385,26 @@
                             grid: { display: false },
                             ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
                         },
-                        y: {
+                        yBTC: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
                             grid: { color: gridColor },
                             ticks: {
-                                color: textColor,
+                                color: '#e08a3e',
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => '$ ' + (v / 1000).toFixed(0) + 'k'
+                                callback: (v) => currentMetric === 'price' ? '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0)) : v.toFixed(1) + 'x'
+                            }
+                        },
+                        yXAUT: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                color: '#c9a536',
+                                font: { family: 'IBM Plex Mono', size: 10 },
+                                callback: (v) => currentMetric === 'price' ? '$' + v.toFixed(0) : v.toFixed(1) + 'x'
                             }
                         }
                     }
@@ -340,13 +412,25 @@
             });
         }
 
+        function changeMetric(metric, evt) {
+            currentMetric = metric;
+            document.querySelectorAll('.metric-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-btc', 'text-white');
+                btn.classList.add('text-gray-400');
+            });
+            evt.target.classList.add('active', 'bg-btc', 'text-white');
+            evt.target.classList.remove('text-gray-400');
+            renderChart();
+        }
+
         function changeChartPeriod(period, evt) {
             currentPeriod = period;
             document.querySelectorAll('.chart-btn').forEach(btn => {
-                btn.classList.remove('text-btc', 'underline', 'underline-offset-8');
-                btn.classList.add('hover:text-gray-900', 'dark:hover:text-white');
+                btn.classList.remove('active', 'text-btc', 'underline', 'underline-offset-8');
+                btn.classList.add('text-gray-400');
             });
-            evt.target.classList.add('text-btc', 'underline', 'underline-offset-8');
+            evt.target.classList.add('active', 'text-btc', 'underline', 'underline-offset-8');
+            evt.target.classList.remove('text-gray-400');
             renderChart();
         }
 
@@ -396,7 +480,7 @@
                     }
                 }
             } catch (e) {
-                console.warn('Usando taxa padrão USD/BRL devido à falha ao carregar câmbio:', e);
+                console.warn('Usando taxa padrão USD/BRL:', e);
             }
         }
 
@@ -424,21 +508,19 @@
             lastFetchText.textContent = 'Buscando cotações CoinGecko...';
 
             try {
-                // Fetch USD/BRL conversion rate
                 await fetchBrlRate();
 
-                // Fetch Bitcoin
                 const btc = await fetchCoinGeckoAsset('bitcoin');
-                btcHistoricalPrices = btc.rawPrices;
+                btcData = btc.rawPrices;
                 updateAssetUI('btc', btc.price, btc.sma);
-                renderChart();
 
-                // Brief pause to prevent rate limit on CoinGecko public API
                 await delay(1200);
 
-                // Fetch Tether Gold
                 const xaut = await fetchCoinGeckoAsset('tether-gold');
+                xautData = xaut.rawPrices;
                 updateAssetUI('xaut', xaut.price, xaut.sma);
+
+                renderChart();
 
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
                 lastFetchText.textContent = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR');
@@ -453,7 +535,6 @@
         window.onload = function() {
             startClock();
             loadTrackerData();
-            // Auto update every 2.5 minutes
             setInterval(loadTrackerData, 150000);
         };
     </script>
