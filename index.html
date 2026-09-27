@@ -220,6 +220,71 @@
 
             </div>
         </section>
+
+        <!-- Seção Calculadora de Preço Médio (DCA) -->
+        <section id="calculadora" class="py-16 bg-white dark:bg-dark-900">
+            <div class="max-w-5xl mx-auto px-6">
+                <div class="mb-8">
+                    <span class="text-xs font-mono text-btc tracking-widest uppercase block">Ferramenta</span>
+                    <h2 class="text-xl font-serif mt-1">Calculadora de Preço Médio (BTC)</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-2xl">Registre suas compras por data e valor investido. A calculadora estima o preço histórico do BTC em cada data, converte para satoshis e compara seu preço médio com a cotação atual.</p>
+                </div>
+
+                <!-- Formulário de entrada -->
+                <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mb-3 items-end">
+                    <div>
+                        <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Data da compra</label>
+                        <input type="date" id="dcaDate" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Valor investido (<span class="currencyLabel">USD</span>)</label>
+                        <input type="number" id="dcaAmount" placeholder="Ex: 500" min="0" step="0.01" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                    </div>
+                    <button onclick="addDcaEntry()" class="px-4 py-2 rounded-lg bg-btc text-white text-sm font-medium hover:opacity-90 transition whitespace-nowrap">+ Adicionar compra</button>
+                </div>
+                <div id="dcaError" class="hidden text-xs font-mono text-up mb-4"></div>
+                <div id="dcaHiddenNote" class="hidden text-[11px] font-mono text-gray-400 mb-4"></div>
+
+                <!-- Tabela de compras -->
+                <div class="overflow-x-auto mb-8 border border-gray-200 dark:border-dark-border rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-[10px] font-mono uppercase text-gray-400 border-b border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-800/30">
+                                <th class="text-left py-2.5 px-3">Data</th>
+                                <th class="text-right py-2.5 px-3">Valor investido</th>
+                                <th class="text-right py-2.5 px-3">Preço na data (est.)</th>
+                                <th class="text-right py-2.5 px-3">Satoshis</th>
+                                <th class="py-2.5 px-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dcaTableBody">
+                            <tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-[10px] font-mono text-gray-400 -mt-6 mb-8">* Data fora da janela de histórico disponível (365 dias); preço estimado pelo ponto mais próximo.</div>
+
+                <!-- Resumo -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-gray-200 dark:border-dark-border pt-6">
+                    <div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total investido</div>
+                        <div class="font-mono text-base font-medium" id="dcaTotalInvested">—</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total em satoshis</div>
+                        <div class="font-mono text-base font-medium" id="dcaTotalSats">—</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago</div>
+                        <div class="font-mono text-base font-medium" id="dcaAvgPrice">—</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Resultado vs. preço atual</div>
+                        <div class="font-serif text-xl" id="dcaProfitPct">—</div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Footer Minimalista -->
@@ -231,6 +296,7 @@
             <div class="flex space-x-6">
                 <a href="#tracker" class="hover:text-btc transition">Dashboard</a>
                 <a href="#cotacao" class="hover:text-btc transition">Mercado</a>
+                <a href="#calculadora" class="hover:text-btc transition">Calculadora</a>
             </div>
         </div>
     </footer>
@@ -246,6 +312,7 @@
         let chartInstance = null;
         let currentPeriod = '24h';
         let currentView = 'btc'; // 'btc', 'xaut' or 'compare'
+        let dcaEntries = []; // { date, amount, currency, price, sats, approx }
 
         // --- Preferências salvas (tema e moeda) ---
         function loadPrefs() {
@@ -289,6 +356,7 @@
             selectedCurrency = curr;
             try { localStorage.setItem('btcTracker.currency', curr); } catch (e) {}
             updateCurrencyButtons(curr);
+            renderDcaTable();
             loadTrackerData();
         }
 
@@ -546,6 +614,124 @@
         };
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+        // --- Calculadora de Preço Médio (DCA) ---
+        function findClosestPrice(dateStr, dataArr) {
+            if (!dataArr || dataArr.length === 0) return null;
+            const target = new Date(dateStr + 'T00:00:00Z').getTime();
+            let closest = dataArr[0];
+            let minDiff = Math.abs(dataArr[0][0] - target);
+            for (const point of dataArr) {
+                const diff = Math.abs(point[0] - target);
+                if (diff < minDiff) { minDiff = diff; closest = point; }
+            }
+            return { price: closest[1], timestamp: closest[0] };
+        }
+
+        function showDcaError(msg) {
+            const el = document.getElementById('dcaError');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function saveDcaEntries() {
+            try { localStorage.setItem('btcTracker.dcaEntries', JSON.stringify(dcaEntries)); } catch (e) {}
+        }
+
+        function loadDcaEntries() {
+            try {
+                const raw = localStorage.getItem('btcTracker.dcaEntries');
+                if (raw) dcaEntries = JSON.parse(raw);
+            } catch (e) { dcaEntries = []; }
+        }
+
+        function addDcaEntry() {
+            document.getElementById('dcaError').classList.add('hidden');
+            const dateInput = document.getElementById('dcaDate');
+            const amountInput = document.getElementById('dcaAmount');
+            const dateStr = dateInput.value;
+            const amount = parseFloat(amountInput.value);
+
+            if (!dateStr) return showDcaError('Selecione uma data.');
+            if (new Date(dateStr + 'T00:00:00Z').getTime() > Date.now()) return showDcaError('A data não pode ser no futuro.');
+            if (!amount || amount <= 0) return showDcaError('Informe um valor investido válido.');
+            if (!btcData || btcData.length === 0) return showDcaError('Aguarde os dados de mercado carregarem antes de adicionar uma compra.');
+
+            const match = findClosestPrice(dateStr, btcData);
+            if (!match || !match.price) return showDcaError('Não foi possível estimar o preço do BTC para essa data.');
+
+            const targetTs = new Date(dateStr + 'T00:00:00Z').getTime();
+            const approx = Math.abs(match.timestamp - targetTs) > 2 * 86400000; // fora da janela de dados diários
+
+            const sats = (amount / match.price) * 1e8;
+
+            dcaEntries.push({ date: dateStr, amount, currency: selectedCurrency, price: match.price, sats, approx });
+            saveDcaEntries();
+            renderDcaTable();
+
+            dateInput.value = '';
+            amountInput.value = '';
+        }
+
+        function removeDcaEntry(idx) {
+            dcaEntries.splice(idx, 1);
+            saveDcaEntries();
+            renderDcaTable();
+        }
+
+        function renderDcaTable() {
+            const tbody = document.getElementById('dcaTableBody');
+            const noteEl = document.getElementById('dcaHiddenNote');
+            if (!tbody) return; // seção ainda não presente no DOM
+
+            if (dcaEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>';
+            } else {
+                tbody.innerHTML = dcaEntries.map((e, idx) => {
+                    const dimmed = e.currency !== selectedCurrency;
+                    const dateFmt = new Date(e.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                    return `
+                        <tr class="border-b border-gray-100 dark:border-dark-border/50 last:border-0 ${dimmed ? 'opacity-40' : ''}">
+                            <td class="py-2 px-3 font-mono text-xs">${dateFmt}</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs">${fmtCurrency(e.amount, e.currency)}${e.approx ? ' *' : ''}</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs text-gray-400">${fmtCurrency(e.price, e.currency)}</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs">${Math.round(e.sats).toLocaleString('pt-BR')} sats</td>
+                            <td class="py-2 px-3 text-right"><button onclick="removeDcaEntry(${idx})" class="text-gray-400 hover:text-up text-xs" title="Remover">✕</button></td>
+                        </tr>`;
+                }).join('');
+            }
+
+            // Resumo considera apenas compras registradas na moeda atualmente selecionada
+            const relevant = dcaEntries.filter(e => e.currency === selectedCurrency);
+            const hiddenCount = dcaEntries.length - relevant.length;
+
+            const totalInvested = relevant.reduce((sum, e) => sum + e.amount, 0);
+            const totalSats = relevant.reduce((sum, e) => sum + e.sats, 0);
+            const totalBtc = totalSats / 1e8;
+            const avgPrice = totalBtc > 0 ? totalInvested / totalBtc : 0;
+
+            document.getElementById('dcaTotalInvested').textContent = relevant.length ? fmtCurrency(totalInvested, selectedCurrency) : '—';
+            document.getElementById('dcaTotalSats').textContent = relevant.length ? Math.round(totalSats).toLocaleString('pt-BR') + ' sats' : '—';
+            document.getElementById('dcaAvgPrice').textContent = relevant.length ? fmtCurrency(avgPrice, selectedCurrency) : '—';
+
+            const profitEl = document.getElementById('dcaProfitPct');
+            if (relevant.length && btcPrice > 0 && avgPrice > 0) {
+                const pct = ((btcPrice - avgPrice) / avgPrice) * 100;
+                const sign = pct >= 0 ? '+' : '';
+                profitEl.textContent = `${sign}${pct.toFixed(2)}%`;
+                profitEl.className = 'font-serif text-xl ' + (pct >= 0 ? 'text-ok' : 'text-up');
+            } else {
+                profitEl.textContent = '—';
+                profitEl.className = 'font-serif text-xl';
+            }
+
+            if (hiddenCount > 0) {
+                noteEl.textContent = `${hiddenCount} compra(s) registrada(s) em outra moeda não entram neste resumo. Troque a moeda no topo para vê-las.`;
+                noteEl.classList.remove('hidden');
+            } else {
+                noteEl.classList.add('hidden');
+            }
+        }
+
         function startClock() {
             const clockEl = document.getElementById('clockDisplay');
             const update = () => clockEl.textContent = new Date().toLocaleTimeString('pt-BR');
@@ -672,6 +858,7 @@
 
             if (prefix === 'btc') {
                 btcPrice = price;
+                renderDcaTable();
             }
         }
 
@@ -741,6 +928,10 @@
         window.onload = function() {
             loadPrefs();
             updateCurrencyButtons(selectedCurrency);
+            loadDcaEntries();
+            renderDcaTable();
+            const dcaDateInput = document.getElementById('dcaDate');
+            if (dcaDateInput) dcaDateInput.max = new Date().toISOString().split('T')[0];
             startClock();
             loadTrackerData();
             setInterval(loadTrackerData, 150000);
