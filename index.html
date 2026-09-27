@@ -1,233 +1,520 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark scroll-smooth">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BTC Shelter - Dash Tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0a0c11;
-    --bg-raised: #0e1117;
-    --line: #22262f;
-    --line-soft: #181b22;
-    --text: #eef0f2;
-    --muted: #8890a0;
-    --muted-dim: #5c6270;
-    --btc: #e08a3e;
-    --xaut: #c9a536;
-    --up: #c15c52;
-    --ok: #5fa87f;
-    --down: #5b93b8;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satoshi — Bitcoin &amp; Macro Tracker</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        btc: '#e08a3e',
+                        xaut: '#c9a536',
+                        up: '#c15c52',
+                        ok: '#5fa87f',
+                        down: '#5b93b8',
+                        dark: {
+                            900: '#0a0c11',
+                            800: '#0e1117',
+                            700: '#181b22',
+                            border: '#22262f'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        serif: ['Fraunces', 'Georgia', 'serif'],
+                        mono: ['IBM Plex Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  * { box-sizing: border-box; }
-  html { -webkit-tap-highlight-color: transparent; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font-family: Inter, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  ::selection { background: var(--xaut); color: #0a0c11; }
-
-  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 22px 72px; }
-
-  /* Masthead */
-  .masthead { border-bottom: 1px solid var(--line); padding-bottom: 22px; margin-bottom: 36px; }
-  .masthead-top { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
-  h1 {
-    font-family: Fraunces, Georgia, serif; font-weight: 500;
-    font-size: clamp(24px, 4.6vw, 32px); letter-spacing: .01em; margin: 0;
-  }
-  .status {
-    font-size: 12px; color: var(--muted-dim); display: flex; align-items: center; gap: 7px;
-    white-space: nowrap; flex-shrink: 0; font-family: 'IBM Plex Mono', monospace;
-  }
-  .status .led { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-dim); }
-  .status.live .led { background: var(--btc); animation: pulse 2.4s ease-in-out infinite; }
-  .status.err .led { background: var(--up); }
-  .status.loading .led { background: var(--xaut); animation: pulse 0.8s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-  @media (prefers-reduced-motion: reduce) { .status.live .led, .status.loading .led { animation: none; } }
-
-  .last-fetch {
-    font-size: 11px; color: var(--muted-dim); margin-top: 6px; text-align: center;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  /* Ticker Rows */
-  .ticker { border-top: 1px solid var(--line); margin-bottom: 48px; }
-  .row {
-    display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 18px; align-items: center;
-    padding: 20px 0; border-bottom: 1px solid var(--line);
-  }
-  .row-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .btc-dot { background: var(--btc); }
-  .xaut-dot { background: var(--xaut); }
-  .row-name { font-size: 14.5px; }
-  .row-name .full { color: var(--muted-dim); font-size: 12.5px; display: block; margin-top: 1px; }
-
-  .row-figures { text-align: center; }
-  .row-figures .lbl { font-size: 10.5px; color: var(--muted-dim); margin-bottom: 3px; }
-  .row-figures .val { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 500; color: var(--text); }
-
-  .row-mm { text-align: right; }
-  .row-mm .mm { font-family: Fraunces, Georgia, serif; font-size: 26px; line-height: 1; }
-  .row-mm .lbl { font-size: 10.5px; color: var(--muted-dim); margin-top: 3px; }
-
-  .zone {
-    font-size: 11.5px; padding: 5px 11px; border-radius: 2px; white-space: nowrap;
-    font-family: Inter, sans-serif; justify-self: end;
-  }
-  .z-down { background: rgba(91, 147, 184, .12); color: var(--down); }
-  .z-ok { background: rgba(95, 168, 127, .12); color: var(--ok); }
-  .z-up { background: rgba(193, 92, 82, .12); color: var(--up); }
-
-  @media (max-width: 560px) {
-    .row { grid-template-columns: 1fr auto; row-gap: 12px; }
-    .row-figures { grid-column: 1/2; text-align: left; display: flex; align-items: baseline; gap: 12px; }
-    .row-mm { grid-column: 2/3; grid-row: 1/2; }
-    .zone { grid-column: 1/3; justify-self: start; }
-  }
-
-  footer {
-    margin-top: 26px;
-    font-size: 11.5px;
-    color: var(--muted-dim);
-    border-top: 1px solid var(--line);
-    padding-top: 18px;
-    text-align: center;
-  }
-</style>
+    <style>
+        body { letter-spacing: -0.011em; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #22262f; }
+        ::-webkit-scrollbar-thumb:hover { background: #e08a3e; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .status .led { width: 6px; height: 6px; border-radius: 50%; background: #5c6270; }
+        .status.live .led { background: #e08a3e; animation: pulse 2.4s ease-in-out infinite; }
+        .status.err .led { background: #c15c52; }
+        .status.loading .led { background: #c9a536; animation: pulse 0.8s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+        @media (prefers-reduced-motion: reduce) { .status.live .led, .status.loading .led { animation: none; } }
+    </style>
 </head>
-<body>
-<div class="wrap">
+<body class="bg-white dark:bg-dark-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-500 antialiased selection:bg-btc/20 selection:text-btc">
 
-  <div class="masthead">
-    <div class="masthead-top">
-      <h1>BTC/XAUt Tracking</h1>
-      <div class="status" id="status">
-        <span class="led"></span>
-        <span id="clockDisplay">00:00:00</span>
-      </div>
-    </div>
-    <div class="last-fetch" id="lastFetchText">Carregando dados...</div>
-  </div>
+    <!-- Header Minimalista -->
+    <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
+        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="#" class="text-lg font-serif font-medium tracking-tight hover:opacity-70 transition">
+                Satoshi<span class="text-btc">.</span>
+            </a>
 
-  <div class="ticker">
-    <div class="row">
-      <div class="row-id"><span class="dot btc-dot"></span><span class="row-name">Bitcoin<span class="full">BTC</span></span></div>
-      <div class="row-figures">
-        <div class="lbl">preço</div><div class="val" id="btcPriceOut">—</div>
-      </div>
-      <div class="row-mm"><div class="mm" id="btcMM">—</div><div class="lbl">múltiplo</div></div>
-      <div class="zone" id="btcZone"></div>
-    </div>
-    <div class="row">
-      <div class="row-id"><span class="dot xaut-dot"></span><span class="row-name">Tether Gold<span class="full">XAUT</span></span></div>
-      <div class="row-figures">
-        <div class="lbl">preço</div><div class="val" id="xautPriceOut">—</div>
-      </div>
-      <div class="row-mm"><div class="mm" id="xautMM">—</div><div class="lbl">múltiplo</div></div>
-      <div class="zone" id="xautZone"></div>
-    </div>
-  </div>
+            <nav class="hidden md:flex items-center space-x-8 text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                <a href="#tracker" class="hover:text-gray-900 dark:hover:text-white transition">Dashboard</a>
+                <a href="#conceito" class="hover:text-gray-900 dark:hover:text-white transition">Conceito</a>
+                <a href="#cotacao" class="hover:text-gray-900 dark:hover:text-white transition">Mercado</a>
+                <a href="#principios" class="hover:text-gray-900 dark:hover:text-white transition">Princípios</a>
+            </nav>
 
-  <footer>Made by Pk · In God We Trust · Brazil 2026</footer>
-</div>
+            <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
+                <span class="dark:hidden">Escuro</span>
+                <span class="hidden dark:inline">Claro</span>
+            </button>
+        </div>
+    </header>
 
-<script>
-const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2 });
+    <main class="pt-20">
+        <!-- Hero Section Minimalista -->
+        <section class="max-w-5xl mx-auto px-6 pt-20 pb-12 md:pt-28 md:pb-16">
+            <div class="max-w-3xl">
+                <span class="text-xs font-mono text-btc tracking-widest uppercase block mb-4">A Moeda da Liberdade</span>
+                <h1 class="text-4xl sm:text-6xl font-serif font-normal tracking-tight leading-[1.15] mb-6">
+                    Um sistema financeiro <span class="italic font-light text-gray-700 dark:text-gray-300">descentralizado</span>, finito e aberto.
+                </h1>
+                <p class="text-lg md:text-xl text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                    Sem intermediários, sem fronteiras e livre de inflação arbitrária. Acompanhe a dinâmica monetária do Bitcoin e do Ouro em tempo real.
+                </p>
+            </div>
+        </section>
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        <!-- Seção BTC / XAUt Tracker (Integrado do Dashboard) -->
+        <section id="tracker" class="border-t border-gray-100 dark:border-dark-border py-12 bg-gray-50/50 dark:bg-dark-800/30">
+            <div class="max-w-5xl mx-auto px-6">
+                
+                <!-- Masthead Status -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-gray-200 dark:border-dark-border gap-4">
+                    <div>
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase block">Métricas Globais</span>
+                        <h2 class="text-xl font-serif mt-1">BTC &amp; Tether Gold vs. MM200</h2>
+                    </div>
+                    
+                    <div class="flex flex-col sm:items-end gap-1">
+                        <div class="status flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400" id="status">
+                            <span class="led"></span>
+                            <span id="clockDisplay">00:00:00</span>
+                        </div>
+                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Carregando dados...</div>
+                    </div>
+                </div>
 
-async function fetchWithRetry(url, retries = 3, backoff = 1000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const res = await fetch(url);
-      if (res.status === 429) {
-        if (i === retries - 1) throw new Error('Limite de requisições excedido (429). Tente novamente em 1 min.');
-        await delay(backoff * (i + 1));
-        continue;
-      }
-      if (!res.ok) throw new Error(`Erro de rede (${res.status})`);
-      return await res.json();
-    } catch (err) {
-      if (i === retries - 1) throw err;
-      await delay(backoff * (i + 1));
-    }
-  }
-}
+                <!-- Ticker Rows -->
+                <div class="divide-y divide-gray-200 dark:divide-dark-border border-y border-gray-200 dark:border-dark-border">
+                    <!-- Bitcoin Row -->
+                    <div class="py-6 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
+                            <div>
+                                <div class="font-medium text-sm">Bitcoin</div>
+                                <div class="text-xs font-mono text-gray-400">BTC</div>
+                            </div>
+                        </div>
+                        <div class="md:text-center">
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
+                            <div class="font-mono text-lg font-medium" id="btcPriceOut">—</div>
+                        </div>
+                        <div class="md:text-right">
+                            <div class="font-serif text-2xl" id="btcMM">—</div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
+                        </div>
+                        <div class="col-span-2 md:col-span-1 md:justify-self-end">
+                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone"></span>
+                        </div>
+                    </div>
 
-function startClock() {
-  const clockEl = document.getElementById('clockDisplay');
-  const update = () => clockEl.textContent = new Date().toLocaleTimeString('pt-BR');
-  update();
-  setInterval(update, 1000);
-}
+                    <!-- Tether Gold Row -->
+                    <div class="py-6 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
+                            <div>
+                                <div class="font-medium text-sm">Tether Gold</div>
+                                <div class="text-xs font-mono text-gray-400">XAUT</div>
+                            </div>
+                        </div>
+                        <div class="md:text-center">
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
+                            <div class="font-mono text-lg font-medium" id="xautPriceOut">—</div>
+                        </div>
+                        <div class="md:text-right">
+                            <div class="font-serif text-2xl" id="xautMM">—</div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
+                        </div>
+                        <div class="col-span-2 md:col-span-1 md:justify-self-end">
+                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone"></span>
+                        </div>
+                    </div>
+                </div>
 
-function zoneFor(v) {
-  if (v < 1) return { cls: 'z-down', label: 'Abaixo da média' };
-  if (v <= 2.4) return { cls: 'z-ok', label: 'Faixa normal' };
-  return { cls: 'z-up', label: 'Esticado' };
-}
+            </div>
+        </section>
 
-function sma200(prices) {
-  if (!prices || prices.length === 0) return 0;
-  const closes = prices.map(p => p[1]).slice(-200);
-  return closes.reduce((a, b) => a + b, 0) / closes.length;
-}
+        <!-- Seção O que é Bitcoin (Conceito) -->
+        <section id="conceito" class="border-t border-gray-100 dark:border-dark-border py-24">
+            <div class="max-w-5xl mx-auto px-6">
+                <div class="grid md:grid-cols-12 gap-12 items-start">
+                    <div class="md:col-span-4">
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase">01 / Conceito</span>
+                        <h2 class="text-2xl font-serif font-light tracking-tight mt-2">O que é o Bitcoin?</h2>
+                    </div>
+                    <div class="md:col-span-8 space-y-6 text-gray-600 dark:text-gray-300 font-light text-lg leading-relaxed">
+                        <p>
+                            Proposto em 2008 por Satoshi Nakamoto, o Bitcoin é um protocolo de consenso peer-to-peer que permite a transferência de valor diretamente entre pessoas, sem depender de instituições financeiras ou governos.
+                        </p>
+                        <p>
+                            Sua rede é garantida por criptografia e auditada continuamente por milhares de nós independentes espalhados pelo globo, tornando a alteração do seu histórico praticamente impossível.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-async function fetchAssetUSD(id) {
-  const chart = await fetchWithRetry(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`);
-  if (!chart.prices || chart.prices.length === 0) throw new Error('Dados indisponíveis para ' + id);
-  const price = chart.prices[chart.prices.length - 1][1];
-  const sma = sma200(chart.prices);
-  return { price, sma };
-}
+        <!-- Seção Cotação, Gráfico e Conversor -->
+        <section id="cotacao" class="border-t border-gray-100 dark:border-dark-border py-24 bg-gray-50/50 dark:bg-dark-800/20">
+            <div class="max-w-5xl mx-auto px-6">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+                    <div>
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase">02 / Mercado</span>
+                        <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Desempenho &amp; Conversão</h2>
+                    </div>
+                    
+                    <!-- Clean Period Filters -->
+                    <div class="flex space-x-6 text-xs font-mono text-gray-400 mt-4 md:mt-0">
+                        <button onclick="updateChart('24h')" class="chart-btn active text-btc underline underline-offset-8">24H</button>
+                        <button onclick="updateChart('7d')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">7D</button>
+                        <button onclick="updateChart('1m')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1M</button>
+                        <button onclick="updateChart('1a')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1A</button>
+                    </div>
+                </div>
 
-function paintUSD(prefix, price, sma) {
-  const mm = price / sma;
-  document.getElementById(prefix + 'PriceOut').textContent = fmtUSD(price);
-  document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
-  const z = zoneFor(mm);
-  const zEl = document.getElementById(prefix + 'Zone');
-  zEl.textContent = z.label; 
-  zEl.className = 'zone ' + z.cls;
-}
+                <div class="grid lg:grid-cols-12 gap-12 items-center">
+                    
+                    <!-- Clean Line Chart -->
+                    <div class="lg:col-span-7">
+                        <div class="h-64 w-full">
+                            <canvas id="btcChart"></canvas>
+                        </div>
+                    </div>
 
-async function load() {
-  const statusEl = document.getElementById('status');
-  const lastFetchText = document.getElementById('lastFetchText');
+                    <!-- Clean Converter -->
+                    <div class="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-dark-border pt-8 lg:pt-0 lg:pl-12 space-y-6">
+                        <h3 class="text-xs font-mono uppercase tracking-wider text-gray-400">Conversor Instantâneo</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs font-mono text-gray-400 block mb-1">BTC</label>
+                                <input type="number" id="calcBtc" value="1" step="0.01" class="w-full bg-transparent border-b border-gray-300 dark:border-dark-border py-2 font-mono text-2xl focus:outline-none focus:border-btc text-gray-900 dark:text-white transition">
+                            </div>
 
-  statusEl.className = 'status loading';
-  lastFetchText.textContent = 'Buscando cotações atualizadas...';
+                            <div>
+                                <label class="text-xs font-mono text-gray-400 block mb-1">BRL (R$)</label>
+                                <input type="number" id="calcBrl" class="w-full bg-transparent border-b border-gray-300 dark:border-dark-border py-2 font-mono text-2xl focus:outline-none focus:border-btc text-gray-900 dark:text-white transition">
+                            </div>
 
-  try {
-    const btc = await fetchAssetUSD('bitcoin');
-    await delay(500);
-    const xaut = await fetchAssetUSD('tether-gold');
+                            <div>
+                                <label class="text-xs font-mono text-gray-400 block mb-1">USD ($)</label>
+                                <input type="number" id="calcUsd" class="w-full bg-transparent border-b border-gray-300 dark:border-dark-border py-2 font-mono text-2xl focus:outline-none focus:border-btc text-gray-900 dark:text-white transition">
+                            </div>
+                        </div>
+                    </div>
 
-    paintUSD('btc', btc.price, btc.sma);
-    paintUSD('xaut', xaut.price, xaut.sma);
+                </div>
+            </div>
+        </section>
 
-    statusEl.className = 'status live';
-    lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
-  } catch (err) {
-    statusEl.className = 'status err';
-    lastFetchText.textContent = 'Falha: ' + err.message;
-  }
-}
+        <!-- Seção Princípios Básicos -->
+        <section id="principios" class="border-t border-gray-100 dark:border-dark-border py-24">
+            <div class="max-w-5xl mx-auto px-6">
+                
+                <div class="mb-16">
+                    <span class="text-xs font-mono text-btc tracking-widest uppercase">03 / Pilares</span>
+                    <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Propriedades Fundamentais</h2>
+                </div>
 
-// Inicialização
-startClock();
-load();
-setInterval(load, 120000);
-</script>
+                <div class="grid md:grid-cols-3 gap-12">
+                    
+                    <div class="space-y-3">
+                        <span class="text-xs font-mono text-gray-400">01. Escassez Absoluta</span>
+                        <h3 class="text-lg font-medium">21 Milhões de Unidades</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                            A emissão é regulada matematicamente. Novos bitcoins são gerados a uma taxa decrescente até o limite final.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <span class="text-xs font-mono text-gray-400">02. Soberania</span>
+                        <h3 class="text-lg font-medium">Autocustódia</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                            Ao possuir suas chaves privadas, você obtém controle total e incondicional sobre seu patrimônio sem intermediários.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <span class="text-xs font-mono text-gray-400">03. Incorruptibilidade</span>
+                        <h3 class="text-lg font-medium">Imutabilidade</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
+                            Regras e transações confirmadas não podem ser alteradas, revogadas ou censuradas por nenhuma entidade.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer Minimalista -->
+    <footer class="border-t border-gray-100 dark:border-dark-border py-16">
+        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-400 font-mono">
+            <div>
+                Made by Pk · In God We Trust · Brazil 2026
+            </div>
+            <div class="flex space-x-6">
+                <a href="#tracker" class="hover:text-btc transition">Dashboard</a>
+                <a href="#conceito" class="hover:text-btc transition">Conceito</a>
+                <a href="#cotacao" class="hover:text-btc transition">Mercado</a>
+                <a href="#principios" class="hover:text-btc transition">Princípios</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // --- Dark Mode Switcher ---
+        const themeToggleBtn = document.getElementById('themeToggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            initOrUpdateChart();
+        });
+
+        // --- Currency Converter ---
+        let btcPriceUsd = 65000;
+        let usdRateBrl = 5.64;
+
+        const calcBtc = document.getElementById('calcBtc');
+        const calcBrl = document.getElementById('calcBrl');
+        const calcUsd = document.getElementById('calcUsd');
+
+        function updateFromBtc() {
+            const btc = parseFloat(calcBtc.value) || 0;
+            const usd = btc * btcPriceUsd;
+            calcUsd.value = usd.toFixed(2);
+            calcBrl.value = (usd * usdRateBrl).toFixed(2);
+        }
+
+        function updateFromBrl() {
+            const brl = parseFloat(calcBrl.value) || 0;
+            const usd = brl / usdRateBrl;
+            calcUsd.value = usd.toFixed(2);
+            calcBtc.value = (usd / btcPriceUsd).toFixed(6);
+        }
+
+        function updateFromUsd() {
+            const usd = parseFloat(calcUsd.value) || 0;
+            calcBrl.value = (usd * usdRateBrl).toFixed(2);
+            calcBtc.value = (usd / btcPriceUsd).toFixed(6);
+        }
+
+        calcBtc.addEventListener('input', updateFromBtc);
+        calcBrl.addEventListener('input', updateFromBrl);
+        calcUsd.addEventListener('input', updateFromUsd);
+
+        // --- Chart.js Implementation ---
+        let btcChartInstance = null;
+        const chartDataSets = {
+            '24h': { labels: ['00h', '04h', '08h', '12h', '16h', '20h', 'Agora'], data: [63200, 63500, 63150, 64200, 64800, 65100, 65420] },
+            '7d': { labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'], data: [61000, 62500, 61800, 63400, 64200, 64900, 65420] },
+            '1m': { labels: ['S1', 'S2', 'S3', 'S4'], data: [58000, 60500, 62800, 65420] },
+            '1a': { labels: ['Jan', 'Mar', 'Mai', 'Jul', 'Set', 'Nov'], data: [42000, 51000, 58000, 61000, 63000, 65420] }
+        };
+
+        let currentPeriod = '24h';
+
+        function initOrUpdateChart() {
+            const ctx = document.getElementById('btcChart').getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#22262f' : '#f0f0f0';
+            const textColor = isDark ? '#5c6270' : '#a3a3a3';
+
+            if (btcChartInstance) {
+                btcChartInstance.destroy();
+            }
+
+            const activeDataset = chartDataSets[currentPeriod];
+
+            btcChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: activeDataset.labels,
+                    datasets: [{
+                        data: activeDataset.data,
+                        borderColor: '#e08a3e',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#e08a3e',
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            displayColors: false,
+                            backgroundColor: isDark ? '#0e1117' : '#ffffff',
+                            titleColor: isDark ? '#8890a0' : '#525252',
+                            bodyColor: '#e08a3e',
+                            borderColor: gridColor,
+                            borderWidth: 1,
+                            callbacks: {
+                                label: (ctx) => `$ ${ctx.parsed.y.toLocaleString('en-US')}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'IBM Plex Mono', size: 10 },
+                                callback: (v) => '$ ' + (v / 1000) + 'k'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(period) {
+            currentPeriod = period;
+            document.querySelectorAll('.chart-btn').forEach(btn => {
+                btn.classList.remove('text-btc', 'underline', 'underline-offset-8');
+                btn.classList.add('hover:text-gray-900', 'dark:hover:text-white');
+            });
+            event.target.classList.add('text-btc', 'underline', 'underline-offset-8');
+            initOrUpdateChart();
+        }
+
+        // --- Live Tracker Logic (CoinGecko API + MM200) ---
+        const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2 });
+        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function fetchWithRetry(url, retries = 3, backoff = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url);
+                    if (res.status === 429) {
+                        if (i === retries - 1) throw new Error('Limite de requisições excedido (429).');
+                        await delay(backoff * (i + 1));
+                        continue;
+                    }
+                    if (!res.ok) throw new Error(`Erro de rede (${res.status})`);
+                    return await res.json();
+                } catch (err) {
+                    if (i === retries - 1) throw err;
+                    await delay(backoff * (i + 1));
+                }
+            }
+        }
+
+        function startClock() {
+            const clockEl = document.getElementById('clockDisplay');
+            const update = () => clockEl.textContent = new Date().toLocaleTimeString('pt-BR');
+            update();
+            setInterval(update, 1000);
+        }
+
+        function zoneFor(v) {
+            if (v < 1) return { cls: 'bg-blue-500/10 text-down', label: 'Abaixo da média' };
+            if (v <= 2.4) return { cls: 'bg-emerald-500/10 text-ok', label: 'Faixa normal' };
+            return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
+        }
+
+        function sma200(prices) {
+            if (!prices || prices.length === 0) return 0;
+            const closes = prices.map(p => p[1]).slice(-200);
+            return closes.reduce((a, b) => a + b, 0) / closes.length;
+        }
+
+        async function fetchAssetUSD(id) {
+            const chart = await fetchWithRetry(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`);
+            if (!chart.prices || chart.prices.length === 0) throw new Error('Dados indisponíveis para ' + id);
+            const price = chart.prices[chart.prices.length - 1][1];
+            const sma = sma200(chart.prices);
+            return { price, sma };
+        }
+
+        function paintUSD(prefix, price, sma) {
+            const mm = price / sma;
+            document.getElementById(prefix + 'PriceOut').textContent = fmtUSD(price);
+            document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
+            
+            const z = zoneFor(mm);
+            const zEl = document.getElementById(prefix + 'Zone');
+            zEl.textContent = z.label; 
+            zEl.className = 'inline-block px-3 py-1 rounded text-xs font-medium ' + z.cls;
+
+            if (prefix === 'btc') {
+                btcPriceUsd = price;
+                updateFromBtc();
+            }
+        }
+
+        async function loadTracker() {
+            const statusEl = document.getElementById('status');
+            const lastFetchText = document.getElementById('lastFetchText');
+
+            statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+            lastFetchText.textContent = 'Buscando cotações atualizadas...';
+
+            try {
+                const btc = await fetchAssetUSD('bitcoin');
+                await delay(500);
+                const xaut = await fetchAssetUSD('tether-gold');
+
+                paintUSD('btc', btc.price, btc.sma);
+                paintUSD('xaut', xaut.price, xaut.sma);
+
+                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+                lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
+            } catch (err) {
+                statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+                lastFetchText.textContent = 'Falha: ' + err.message;
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            initOrUpdateChart();
+            startClock();
+            loadTracker();
+            setInterval(loadTracker, 120000);
+        };
+    </script>
 </body>
 </html>
-
-```
