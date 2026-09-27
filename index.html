@@ -38,7 +38,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -146,25 +146,31 @@
         <!-- Seção Cotação, Gráfico de Comparação e Conversor -->
         <section id="cotacao" class="border-t border-gray-100 dark:border-dark-border py-24 bg-gray-50/50 dark:bg-dark-800/20">
             <div class="max-w-5xl mx-auto px-6">
-                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
                     <div>
                         <span class="text-xs font-mono text-btc tracking-widest uppercase">01 / Mercado</span>
                         <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Comparativo BTC vs. XAUT</h2>
                     </div>
                     
-                    <div class="flex flex-wrap items-center gap-6 text-xs font-mono text-gray-400">
-                        <!-- Mode Selector -->
-                        <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded">
-                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1 rounded text-white bg-btc transition">Preços</button>
-                            <button onclick="changeMetric('mayer', event)" class="metric-btn px-3 py-1 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition">Múltiplo MM200</button>
+                    <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
+                        <!-- Mode Selector (Preço vs MM200) -->
+                        <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded-xl">
+                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">Preços</button>
+                            <button onclick="changeMetric('mayer', event)" class="metric-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">Múltiplo MM200</button>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Clean Period Filters -->
-                        <div class="flex space-x-4">
-                            <button onclick="changeChartPeriod('7d', event)" class="chart-btn text-gray-400 hover:text-gray-900 dark:hover:text-white transition">7D</button>
-                            <button onclick="changeChartPeriod('1m', event)" class="chart-btn text-gray-400 hover:text-gray-900 dark:hover:text-white transition">1M</button>
-                            <button onclick="changeChartPeriod('200d', event)" class="chart-btn active text-btc underline underline-offset-8">200D</button>
-                        </div>
+                <!-- Barra de Seleção de Período (Estilo IDÊNTICO ao print enviado) -->
+                <div class="mb-8 flex overflow-x-auto pb-2">
+                    <div class="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100/80 dark:bg-dark-800/80 border border-slate-200/50 dark:border-dark-border/60 text-xs font-medium text-slate-600 dark:text-gray-300">
+                        <button onclick="changeChartPeriod('24h', event)" class="chart-btn px-3.5 py-1.5 rounded-xl bg-white dark:bg-dark-700 text-slate-900 dark:text-white font-semibold shadow-sm transition">24h</button>
+                        <button onclick="changeChartPeriod('7d', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">7d</button>
+                        <button onclick="changeChartPeriod('1m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">1M</button>
+                        <button onclick="changeChartPeriod('3m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">3M</button>
+                        <button onclick="changeChartPeriod('ytd', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">Acumulado no ano</button>
+                        <button onclick="changeChartPeriod('1a', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">1A</button>
+                        <button onclick="changeChartPeriod('max', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">Máx</button>
                     </div>
                 </div>
 
@@ -226,7 +232,7 @@
         let xautData = [];
         
         let chartInstance = null;
-        let currentPeriod = '200d';
+        let currentPeriod = '24h';
         let currentMetric = 'price'; // 'price' or 'mayer'
 
         // --- Dark Mode Switcher ---
@@ -272,7 +278,7 @@
         function calculateMayerSeries(pricesArr) {
             const result = [];
             for (let i = 0; i < pricesArr.length; i++) {
-                const slice = pricesArr.slice(0, i + 1);
+                const slice = pricesArr.slice(Math.max(0, i - 199), i + 1);
                 const sum = slice.reduce((acc, curr) => acc + curr[1], 0);
                 const sma = sum / slice.length;
                 const currentPrice = pricesArr[i][1];
@@ -284,9 +290,22 @@
 
         function filterSeries(arr, period) {
             if (!arr || arr.length === 0) return [];
+            
+            const now = new Date();
+            const currentYear = now.getFullYear();
+
+            if (period === '24h') return arr.slice(-24);
             if (period === '7d') return arr.slice(-7);
             if (period === '1m') return arr.slice(-30);
-            return arr;
+            if (period === '3m') return arr.slice(-90);
+            if (period === 'ytd') {
+                return arr.filter(item => {
+                    const d = new Date(item.timestamp || item[0]);
+                    return d.getFullYear() === currentYear;
+                });
+            }
+            if (period === '1a') return arr.slice(-365);
+            return arr; // 'max'
         }
 
         // --- Comparison Chart Rendering ---
@@ -315,6 +334,9 @@
 
             const labels = btcSeries.map(item => {
                 const date = new Date(item.timestamp);
+                if (currentPeriod === '24h') {
+                    return date.getHours() + 'h';
+                }
                 return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             });
 
@@ -383,7 +405,7 @@
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
+                            ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 }, maxTicksLimit: 10 }
                         },
                         yBTC: {
                             type: 'linear',
@@ -416,21 +438,19 @@
             currentMetric = metric;
             document.querySelectorAll('.metric-btn').forEach(btn => {
                 btn.classList.remove('active', 'bg-btc', 'text-white');
-                btn.classList.add('text-gray-400');
+                btn.classList.add('text-gray-500', 'dark:text-gray-400');
             });
             evt.target.classList.add('active', 'bg-btc', 'text-white');
-            evt.target.classList.remove('text-gray-400');
+            evt.target.classList.remove('text-gray-500', 'dark:text-gray-400');
             renderChart();
         }
 
         function changeChartPeriod(period, evt) {
             currentPeriod = period;
             document.querySelectorAll('.chart-btn').forEach(btn => {
-                btn.classList.remove('active', 'text-btc', 'underline', 'underline-offset-8');
-                btn.classList.add('text-gray-400');
+                btn.className = "chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition";
             });
-            evt.target.classList.add('active', 'text-btc', 'underline', 'underline-offset-8');
-            evt.target.classList.remove('text-gray-400');
+            evt.target.className = "chart-btn px-3.5 py-1.5 rounded-xl bg-white dark:bg-dark-700 text-slate-900 dark:text-white font-semibold shadow-sm transition";
             renderChart();
         }
 
@@ -458,7 +478,7 @@
         }
 
         async function fetchCoinGeckoAsset(id) {
-            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`;
+            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Falha na API CoinGecko (${res.status})`);
             const data = await res.json();
