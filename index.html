@@ -64,7 +64,13 @@
 
     <!-- Header Minimalista -->
     <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
-        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-end">
+        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-end gap-4">
+            <!-- Botão Seletor de Moeda Pequeno -->
+            <div class="flex items-center bg-gray-100 dark:bg-dark-700 p-0.5 rounded-lg border border-gray-200 dark:border-dark-border text-[10px] font-mono">
+                <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-1.5 py-0.5 rounded bg-btc text-white font-medium transition">USD</button>
+                <button id="currBrlBtn" onclick="setCurrency('brl')" class="px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition">BRL</button>
+            </div>
+
             <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
                 <span class="dark:hidden">Modo Escuro</span>
                 <span class="hidden dark:inline">Modo Claro</span>
@@ -105,7 +111,7 @@
                             </div>
                         </div>
                         <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
                             <div class="font-mono text-lg font-medium" id="btcPriceOut">Carregando...</div>
                         </div>
                         <div class="md:text-right">
@@ -127,7 +133,7 @@
                             </div>
                         </div>
                         <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
                             <div class="font-mono text-lg font-medium" id="xautPriceOut">Carregando...</div>
                         </div>
                         <div class="md:text-right">
@@ -199,7 +205,8 @@
 
     <!-- Logic Script -->
     <script>
-        let btcPriceUsd = 0;
+        let btcPrice = 0;
+        let selectedCurrency = 'usd'; // 'usd' or 'brl'
         
         let btcData = [];
         let xautData = [];
@@ -214,6 +221,27 @@
             document.documentElement.classList.toggle('dark');
             renderChart();
         });
+
+        // --- Currency Switcher ---
+        function setCurrency(curr) {
+            if (selectedCurrency === curr) return;
+            selectedCurrency = curr;
+            
+            // Atualizar classes dos botões
+            const usdBtn = document.getElementById('currUsdBtn');
+            const brlBtn = document.getElementById('currBrlBtn');
+
+            if (curr === 'usd') {
+                usdBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
+                brlBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+            } else {
+                brlBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
+                usdBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+            }
+
+            document.querySelectorAll('.currencyLabel').forEach(el => el.textContent = curr.toUpperCase());
+            loadTrackerData();
+        }
 
         // --- Calculation Helpers ---
         function calculateMayerSeries(pricesArr) {
@@ -297,13 +325,16 @@
                 }
             });
 
+            const currSymbol = selectedCurrency === 'brl' ? 'R$' : '$';
+            const localeStr = selectedCurrency === 'brl' ? 'pt-BR' : 'en-US';
+
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
                         {
-                            label: 'BTC ' + (currentMetric === 'price' ? 'USD' : 'Múltiplo MM200'),
+                            label: 'BTC ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
                             data: btcSeries.map(s => s.value),
                             borderColor: btcDefaultColor,
                             backgroundColor: btcDefaultColor,
@@ -315,7 +346,7 @@
                             segment: getSegmentColor(btcDefaultColor)
                         },
                         {
-                            label: 'XAUT ' + (currentMetric === 'price' ? 'USD' : 'Múltiplo MM200'),
+                            label: 'XAUT ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
                             data: xautSeries.map(s => s.value),
                             borderColor: xautDefaultColor,
                             backgroundColor: xautDefaultColor,
@@ -353,7 +384,7 @@
                                 label: (ctx) => {
                                     const val = ctx.parsed.y;
                                     if (currentMetric === 'price') {
-                                        return `${ctx.dataset.label}: $${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                        return `${ctx.dataset.label}: ${currSymbol}${val.toLocaleString(localeStr, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                                     } else {
                                         return `${ctx.dataset.label}: ${val.toFixed(2)}x`;
                                     }
@@ -374,7 +405,7 @@
                             ticks: {
                                 color: '#e08a3e',
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => currentMetric === 'price' ? '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0)) : v.toFixed(1) + 'x'
+                                callback: (v) => currentMetric === 'price' ? currSymbol + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toFixed(0)) : v.toFixed(1) + 'x'
                             }
                         },
                         yXAUT: {
@@ -385,7 +416,7 @@
                             ticks: {
                                 color: '#c9a536',
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => currentMetric === 'price' ? '$' + v.toFixed(0) : v.toFixed(1) + 'x'
+                                callback: (v) => currentMetric === 'price' ? currSymbol + v.toFixed(0) : v.toFixed(1) + 'x'
                             }
                         }
                     }
@@ -414,7 +445,11 @@
         }
 
         // --- CoinGecko API Logic ---
-        const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtCurrency = (n, curr) => {
+            const locale = curr === 'brl' ? 'pt-BR' : 'en-US';
+            const symbol = curr === 'brl' ? 'R$' : '$';
+            return symbol + ' ' + n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
         function startClock() {
@@ -436,8 +471,8 @@
             return closes.reduce((a, b) => a + b, 0) / closes.length;
         }
 
-        async function fetchCoinGeckoAsset(id) {
-            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`;
+        async function fetchCoinGeckoAsset(id, vsCurrency) {
+            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`Falha na API CoinGecko (${res.status})`);
             const data = await res.json();
@@ -451,7 +486,7 @@
 
         function updateAssetUI(prefix, price, sma) {
             const mm = price / sma;
-            document.getElementById(prefix + 'PriceOut').textContent = fmtUSD(price);
+            document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, selectedCurrency);
             document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
             
             const z = zoneFor(mm);
@@ -460,7 +495,7 @@
             zEl.className = 'inline-block px-3 py-1 rounded text-xs font-medium ' + z.cls;
 
             if (prefix === 'btc') {
-                btcPriceUsd = price;
+                btcPrice = price;
             }
         }
 
@@ -472,13 +507,13 @@
             lastFetchText.textContent = 'Buscando cotações CoinGecko...';
 
             try {
-                const btc = await fetchCoinGeckoAsset('bitcoin');
+                const btc = await fetchCoinGeckoAsset('bitcoin', selectedCurrency);
                 btcData = btc.rawPrices;
                 updateAssetUI('btc', btc.price, btc.sma);
 
                 await delay(1200);
 
-                const xaut = await fetchCoinGeckoAsset('tether-gold');
+                const xaut = await fetchCoinGeckoAsset('tether-gold', selectedCurrency);
                 xautData = xaut.rawPrices;
                 updateAssetUI('xaut', xaut.price, xaut.sma);
 
