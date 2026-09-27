@@ -71,9 +71,7 @@
 
             <nav class="hidden md:flex items-center space-x-8 text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400">
                 <a href="#tracker" class="hover:text-gray-900 dark:hover:text-white transition">Dashboard</a>
-                <a href="#conceito" class="hover:text-gray-900 dark:hover:text-white transition">Conceito</a>
                 <a href="#cotacao" class="hover:text-gray-900 dark:hover:text-white transition">Mercado</a>
-                <a href="#principios" class="hover:text-gray-900 dark:hover:text-white transition">Princípios</a>
             </nav>
 
             <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
@@ -84,21 +82,8 @@
     </header>
 
     <main class="pt-20">
-        <!-- Hero Section Minimalista -->
-        <section class="max-w-5xl mx-auto px-6 pt-20 pb-12 md:pt-28 md:pb-16">
-            <div class="max-w-3xl">
-                <span class="text-xs font-mono text-btc tracking-widest uppercase block mb-4">A Moeda da Liberdade</span>
-                <h1 class="text-4xl sm:text-6xl font-serif font-normal tracking-tight leading-[1.15] mb-6">
-                    Um sistema financeiro <span class="italic font-light text-gray-700 dark:text-gray-300">descentralizado</span>, finito e aberto.
-                </h1>
-                <p class="text-lg md:text-xl text-gray-500 dark:text-gray-400 font-light leading-relaxed">
-                    Sem intermediários, sem fronteiras e livre de inflação arbitrária. Acompanhe a dinâmica monetária do Bitcoin e do Ouro em tempo real.
-                </p>
-            </div>
-        </section>
-
-        <!-- Seção BTC / XAUt Tracker (Integrado do Dashboard) -->
-        <section id="tracker" class="border-t border-gray-100 dark:border-dark-border py-12 bg-gray-50/50 dark:bg-dark-800/30">
+        <!-- Seção BTC / XAUt Tracker -->
+        <section id="tracker" class="py-12 bg-gray-50/50 dark:bg-dark-800/30">
             <div class="max-w-5xl mx-auto px-6">
                 
                 <!-- Masthead Status -->
@@ -167,32 +152,12 @@
             </div>
         </section>
 
-        <!-- Seção O que é Bitcoin (Conceito) -->
-        <section id="conceito" class="border-t border-gray-100 dark:border-dark-border py-24">
-            <div class="max-w-5xl mx-auto px-6">
-                <div class="grid md:grid-cols-12 gap-12 items-start">
-                    <div class="md:col-span-4">
-                        <span class="text-xs font-mono text-btc tracking-widest uppercase">01 / Conceito</span>
-                        <h2 class="text-2xl font-serif font-light tracking-tight mt-2">O que é o Bitcoin?</h2>
-                    </div>
-                    <div class="md:col-span-8 space-y-6 text-gray-600 dark:text-gray-300 font-light text-lg leading-relaxed">
-                        <p>
-                            Proposto em 2008 por Satoshi Nakamoto, o Bitcoin é um protocolo de consenso peer-to-peer que permite a transferência de valor diretamente entre pessoas, sem depender de instituições financeiras ou governos.
-                        </p>
-                        <p>
-                            Sua rede é garantida por criptografia e auditada continuamente por milhares de nós independentes espalhados pelo globo, tornando a alteração do seu histórico praticamente impossível.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- Seção Cotação, Gráfico e Conversor -->
         <section id="cotacao" class="border-t border-gray-100 dark:border-dark-border py-24 bg-gray-50/50 dark:bg-dark-800/20">
             <div class="max-w-5xl mx-auto px-6">
                 <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
                     <div>
-                        <span class="text-xs font-mono text-btc tracking-widest uppercase">02 / Mercado</span>
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase">01 / Mercado</span>
                         <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Desempenho &amp; Conversão</h2>
                     </div>
                     
@@ -239,45 +204,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- Seção Princípios Básicos -->
-        <section id="principios" class="border-t border-gray-100 dark:border-dark-border py-24">
-            <div class="max-w-5xl mx-auto px-6">
-                
-                <div class="mb-16">
-                    <span class="text-xs font-mono text-btc tracking-widest uppercase">03 / Pilares</span>
-                    <h2 class="text-2xl font-serif font-light tracking-tight mt-2">Propriedades Fundamentais</h2>
-                </div>
-
-                <div class="grid md:grid-cols-3 gap-12">
-                    
-                    <div class="space-y-3">
-                        <span class="text-xs font-mono text-gray-400">01. Escassez Absoluta</span>
-                        <h3 class="text-lg font-medium">21 Milhões de Unidades</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
-                            A emissão é regulada matematicamente. Novos bitcoins são gerados a uma taxa decrescente até o limite final.
-                        </p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <span class="text-xs font-mono text-gray-400">02. Soberania</span>
-                        <h3 class="text-lg font-medium">Autocustódia</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
-                            Ao possuir suas chaves privadas, você obtém controle total e incondicional sobre seu patrimônio sem intermediários.
-                        </p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <span class="text-xs font-mono text-gray-400">03. Incorruptibilidade</span>
-                        <h3 class="text-lg font-medium">Imutabilidade</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 font-light leading-relaxed">
-                            Regras e transações confirmadas não podem ser alteradas, revogadas ou censuradas por nenhuma entidade.
-                        </p>
-                    </div>
-
-                </div>
-            </div>
-        </section>
     </main>
 
     <!-- Footer Minimalista -->
@@ -288,9 +214,7 @@
             </div>
             <div class="flex space-x-6">
                 <a href="#tracker" class="hover:text-btc transition">Dashboard</a>
-                <a href="#conceito" class="hover:text-btc transition">Conceito</a>
                 <a href="#cotacao" class="hover:text-btc transition">Mercado</a>
-                <a href="#principios" class="hover:text-btc transition">Princípios</a>
             </div>
         </div>
     </footer>
