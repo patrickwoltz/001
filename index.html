@@ -1116,7 +1116,7 @@
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500';
                 const now = new Date();
                 const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                lastFetchText.textContent = `Atualizado às ${horario} via (${activeSource})`;
+                lastFetchText.textContent = `Atualizado às ${horario} via ${activeSource}`;
             }
         }
 
