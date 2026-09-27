@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin &amp; Macro Tracker</title>
+    <title>BitBunker</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -58,13 +58,59 @@
         .status.loading .led { background: #a855f7; animation: pulse 0.8s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
         @media (prefers-reduced-motion: reduce) { .status.live .led, .status.loading .led { animation: none; } }
+
+        .brazil-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 16px 34px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+            font-size: 22px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #ffffff;
+            border-radius: 6px;
+            overflow: hidden;
+            background-color: #009c3b;
+            cursor: default;
+            isolation: isolate;
+        }
+        .brazil-logo::before {
+            content: '';
+            position: absolute;
+            width: 78%;
+            height: 155%;
+            background: #ffdf00;
+            transform: rotate(45deg);
+            z-index: 0;
+        }
+        .brazil-logo::after {
+            content: '';
+            position: absolute;
+            width: 42%;
+            height: 42%;
+            border-radius: 50%;
+            background: #002776;
+            z-index: 1;
+        }
+        .brazil-logo span.logo-text {
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-dark-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-500 antialiased selection:bg-btc/20 selection:text-btc">
 
     <!-- Header Minimalista -->
     <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
-        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-end gap-4">
+        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
+            <!-- Botão BitBunker -->
+            <span id="bitBunkerBtn" class="brazil-logo select-none"><span class="logo-text">BitBunker</span></span>
+
+            <div class="flex items-center gap-4">
             <!-- Botão Seletor de Moeda Pequeno -->
             <div class="flex items-center bg-gray-100 dark:bg-dark-700 p-0.5 rounded-lg border border-gray-200 dark:border-dark-border text-[10px] font-mono">
                 <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-1.5 py-0.5 rounded bg-btc text-white font-medium transition">USD</button>
@@ -75,6 +121,7 @@
                 <span class="dark:hidden">Modo Escuro</span>
                 <span class="hidden dark:inline">Modo Claro</span>
             </button>
+            </div>
         </div>
     </header>
 
@@ -87,15 +134,14 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-gray-200 dark:border-dark-border gap-4">
                     <div>
                         <span class="text-xs font-mono text-btc tracking-widest uppercase block">Métricas Globais</span>
-                        <h2 class="text-xl font-serif mt-1">BTC &amp; Tether Gold vs. MM200</h2>
+                        <h2 class="text-xl font-serif mt-1">BTC x Tether Gold</h2>
                     </div>
                     
                     <div class="flex flex-col sm:items-end gap-1">
-                        <div class="status flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400" id="status">
+                        <div class="status flex items-center gap-2 text-[11px] font-mono text-gray-400 dark:text-gray-500" id="status">
                             <span class="led"></span>
-                            <span id="clockDisplay">00:00:00</span>
+                            <span id="lastFetchText">Iniciando consulta às cotações...</span>
                         </div>
-                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Iniciando consulta às cotações...</div>
                     </div>
                 </div>
 
@@ -750,13 +796,6 @@
             }
         }
 
-        function startClock() {
-            const clockEl = document.getElementById('clockDisplay');
-            const update = () => clockEl.textContent = new Date().toLocaleTimeString('pt-BR');
-            update();
-            setInterval(update, 1000);
-        }
-
         function zoneFor(v) {
             if (v < 1) return { cls: 'bg-blue-500/10 text-down', label: 'Abaixo da média' };
             if (v <= 2.4) return { cls: 'bg-emerald-500/10 text-ok', label: 'Faixa normal' };
@@ -964,7 +1003,6 @@
             renderDcaTable();
             const dcaDateInput = document.getElementById('dcaDate');
             if (dcaDateInput) dcaDateInput.max = new Date().toISOString().split('T')[0];
-            startClock();
             loadTrackerData();
             setInterval(loadTrackerData, 150000);
         };
