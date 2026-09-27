@@ -644,7 +644,14 @@
             const symbol = curr === 'brl' ? 'R$' : '$';
             return symbol + ' ' + n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
-        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        // fetch com timeout: evita que uma fonte lenta ou travada prenda a fila de fallback
+        // por muito tempo antes de desistir e tentar a próxima fonte.
+        function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+        }
 
         // --- Calculadora de Preço Médio (DCA) ---
         function findClosestPrice(dateStr, dataArr) {
@@ -794,17 +801,19 @@
 
         async function fetchCoinGeckoAsset(id, vsCurrency) {
             const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
-            const resChart = await fetch(urlChart);
-            if (!resChart.ok) throw new Error(`CoinGecko Chart Status ${resChart.status}`);
-            const dataChart = await resChart.json();
-
-            await delay(500);
-
             const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
-            const resCoin = await fetch(urlCoin);
+
+            // As duas chamadas são independentes, então rodam em paralelo em vez de
+            // sequenciais com um delay artificial entre elas (isso já cortava ~0.5s+ por ativo).
+            const [resChart, resCoin] = await Promise.all([
+                fetchWithTimeout(urlChart),
+                fetchWithTimeout(urlCoin)
+            ]);
+            if (!resChart.ok) throw new Error(`CoinGecko Chart Status ${resChart.status}`);
             if (!resCoin.ok) throw new Error(`CoinGecko Coin Status ${resCoin.status}`);
-            const dataCoin = await resCoin.json();
-            
+
+            const [dataChart, dataCoin] = await Promise.all([resChart.json(), resCoin.json()]);
+
             if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados CoinGecko');
 
             const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
@@ -830,7 +839,7 @@
             const cmcCurrencyId = vsCurrency === 'brl' ? '2783' : '2781';
             const url = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
             
-            const res = await fetch(url);
+            const res = await fetchWithTimeout(url);
             if (!res.ok) throw new Error(`CMC Status ${res.status}`);
             const data = await res.json();
             
@@ -868,14 +877,14 @@
         async function fetchTradingViewAsset(tickers, symbol, vsCurrency) {
             for (const ticker of tickers) {
                 try {
-                    const res = await fetch('https://scanner.tradingview.com/crypto/scan', {
+                    const res = await fetchWithTimeout('https://scanner.tradingview.com/crypto/scan', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             symbols: { tickers: [ticker] },
                             columns: ['close', 'change', 'High.All']
                         })
-                    });
+                    }, 4000);
                     if (!res.ok) continue;
                     const data = await res.json();
                     const row = data?.data?.[0]?.d;
@@ -971,11 +980,75 @@
             statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
             lastFetchText.textContent = 'Consultando fontes de mercado...';
 
-            const results = { btc: null, xaut: null };
-            const errors = [];
+            // BTC e XAUT são buscados em paralelo (antes era sequencial: BTC terminava
+            // por completo para só então começar a busca do XAUT, dobrando o tempo de espera).
+            const [btcResult, xautResult] = await Promise.allSettled([
+                getAssetData('bitcoin', '1', TV_TICKERS.BTC, 'BTC', requestCurrency),
+                getAssetData('tether-gold', '4705', TV_TICKERS.XAUT, 'XAUT', requestCurrency)
+            ]);
 
-            try {
-                const btc = await getAssetData('bitcoin', '1', TV_TICKERS.BTC, 'BTC', requestCurrency);
-                if (myGen !== fetchGeneration) return; // uma busca mais nova já assumiu
-                results.btc = btc;
-                btcData
+            if (myGen !== fetchGeneration) return; // uma busca mais nova já assumiu, descarta esta
+
+            const errors = [];
+            const simulatedAssets = [];
+
+            if (btcResult.status === 'fulfilled') {
+                const btc = btcResult.value;
+                btcData = btc.rawPrices;
+                updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h, requestCurrency);
+                if (btc.simulated) simulatedAssets.push('BTC');
+            } else {
+                errors.push('BTC');
+                console.error('Falha ao buscar dados de BTC:', btcResult.reason);
+            }
+
+            if (xautResult.status === 'fulfilled') {
+                const xaut = xautResult.value;
+                xautData = xaut.rawPrices;
+                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate, xaut.change24h, requestCurrency);
+                if (xaut.simulated) simulatedAssets.push('XAUT');
+            } else {
+                errors.push('XAUT');
+                console.error('Falha ao buscar dados de XAUT:', xautResult.reason);
+            }
+
+            updateHalvingCountdown();
+            renderChart();
+
+            const warningEl = document.getElementById('simulatedWarning');
+            if (simulatedAssets.length > 0) {
+                document.getElementById('simulatedAssets').textContent = simulatedAssets.join(' e ');
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
+            }
+
+            if (errors.length === 2) {
+                statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-up';
+                lastFetchText.textContent = 'Erro ao consultar todas as fontes. Tentando novamente em breve...';
+            } else {
+                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+                const now = new Date();
+                const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                lastFetchText.textContent = errors.length
+                    ? `Atualizado parcialmente às ${horario} (falha em ${errors.join(', ')})`
+                    : `Atualizado às ${horario}`;
+            }
+        }
+
+        // --- Inicialização ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPrefs();
+            updateCurrencyButtons(selectedCurrency);
+            loadDcaEntries();
+            renderDcaTable();
+
+            updateHalvingCountdown();
+            setInterval(updateHalvingCountdown, 60 * 1000);
+
+            loadTrackerData();
+            setInterval(loadTrackerData, 60 * 1000); // atualiza cotações a cada 1 minuto
+        });
+    </script>
+</body>
+</html>
