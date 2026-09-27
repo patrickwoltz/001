@@ -408,6 +408,13 @@
 
     <!-- Application Logic Script -->
     <script>
+        // =========================================================================
+        // VALORES ATUAIS DE EMERGÊNCIA (Edite estas variáveis com as cotações atuais)
+        // =========================================================================
+        const VALOR_ATUAL_BTC = 64500;  // <-- Insira o valor atual do BTC (USD) aqui
+        const VALOR_ATUAL_XAUT = 2650;  // <-- Insira o valor atual do XAUT (USD) aqui
+        // =========================================================================
+
         let btcPrice = 0;
         let selectedCurrency = 'usd'; // 'usd' or 'brl'
         let activePage = 'overview'; // 'overview', 'comparativo', 'calculadora'
@@ -959,7 +966,7 @@
         // Fallback de Emergência em caso de restrição extrema de CORS/network
         async function generateEmergencyFallback(symbol, vsCurrency) {
             const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
-            const basePrice = symbol === 'BTC' ? 96500 : 2740;
+            const basePrice = symbol === 'BTC' ? VALOR_ATUAL_BTC : VALOR_ATUAL_XAUT; // Atualizado para usar variáveis ajustáveis
             const price = basePrice * usdRate;
             const now = Date.now();
             const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
