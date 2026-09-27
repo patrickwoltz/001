@@ -253,7 +253,7 @@
                                 <th class="text-left py-2.5 px-3">Data</th>
                                 <th class="text-right py-2.5 px-3">Valor investido</th>
                                 <th class="text-right py-2.5 px-3">Preço na data (est.)</th>
-                                <th class="text-right py-2.5 px-3">Satoshis</th>
+                                <th class="text-right py-2.5 px-3">BTC</th>
                                 <th class="py-2.5 px-3"></th>
                             </tr>
                         </thead>
@@ -271,12 +271,16 @@
                         <div class="font-mono text-base font-medium" id="dcaTotalInvested">—</div>
                     </div>
                     <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total em satoshis</div>
-                        <div class="font-mono text-base font-medium" id="dcaTotalSats">—</div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total em BTC</div>
+                        <div class="font-mono text-base font-medium" id="dcaTotalBtc">—</div>
                     </div>
                     <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago</div>
-                        <div class="font-mono text-base font-medium" id="dcaAvgPrice">—</div>
+                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago <span class="normal-case text-gray-300 dark:text-gray-600">vs. atual</span></div>
+                        <div class="flex items-baseline gap-2 flex-wrap">
+                            <span class="font-mono text-base font-medium" id="dcaAvgPrice">—</span>
+                            <span class="text-gray-300 dark:text-gray-600 text-xs">→</span>
+                            <span class="font-mono text-base font-medium text-btc" id="dcaCurrentPrice">—</span>
+                        </div>
                     </div>
                     <div>
                         <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Resultado vs. preço atual</div>
@@ -689,18 +693,19 @@
                 tbody.innerHTML = dcaEntries.map((e, idx) => {
                     const dimmed = e.currency !== selectedCurrency;
                     const dateFmt = new Date(e.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                    const btcAmount = e.sats / 1e8;
                     return `
                         <tr class="border-b border-gray-100 dark:border-dark-border/50 last:border-0 ${dimmed ? 'opacity-40' : ''}">
                             <td class="py-2 px-3 font-mono text-xs">${dateFmt}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs">${fmtCurrency(e.amount, e.currency)}${e.approx ? ' *' : ''}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs text-gray-400">${fmtCurrency(e.price, e.currency)}</td>
-                            <td class="py-2 px-3 text-right font-mono text-xs">${Math.round(e.sats).toLocaleString('pt-BR')} sats</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs">${btcAmount.toFixed(8)} BTC</td>
                             <td class="py-2 px-3 text-right"><button onclick="removeDcaEntry(${idx})" class="text-gray-400 hover:text-up text-xs" title="Remover">✕</button></td>
                         </tr>`;
                 }).join('');
             }
 
-            // Resumo considera apenas compras registradas na moeda atualmente selecionada
+            // Resumo considera apenas compras registradas na moeda atualmente selecionada (BRL ou USD, conforme o toggle do topo)
             const relevant = dcaEntries.filter(e => e.currency === selectedCurrency);
             const hiddenCount = dcaEntries.length - relevant.length;
 
@@ -710,8 +715,9 @@
             const avgPrice = totalBtc > 0 ? totalInvested / totalBtc : 0;
 
             document.getElementById('dcaTotalInvested').textContent = relevant.length ? fmtCurrency(totalInvested, selectedCurrency) : '—';
-            document.getElementById('dcaTotalSats').textContent = relevant.length ? Math.round(totalSats).toLocaleString('pt-BR') + ' sats' : '—';
+            document.getElementById('dcaTotalBtc').textContent = relevant.length ? totalBtc.toFixed(8) + ' BTC' : '—';
             document.getElementById('dcaAvgPrice').textContent = relevant.length ? fmtCurrency(avgPrice, selectedCurrency) : '—';
+            document.getElementById('dcaCurrentPrice').textContent = btcPrice > 0 ? fmtCurrency(btcPrice, selectedCurrency) : '—';
 
             const profitEl = document.getElementById('dcaProfitPct');
             if (relevant.length && btcPrice > 0 && avgPrice > 0) {
@@ -723,6 +729,7 @@
                 profitEl.textContent = '—';
                 profitEl.className = 'font-serif text-xl';
             }
+
 
             if (hiddenCount > 0) {
                 noteEl.textContent = `${hiddenCount} compra(s) registrada(s) em outra moeda não entram neste resumo. Troque a moeda no topo para vê-las.`;
