@@ -46,7 +46,8 @@
     font-family:'IBM Plex Mono',monospace;
   }
   .status .led{width:6px;height:6px;border-radius:50%;background:var(--muted-dim);}
-  .status.live .led{background:var(--ok);animation:pulse 2.4s ease-in-out infinite;}
+  /* Bolinha alterada para a cor laranja (--btc) */
+  .status.live .led{background:var(--btc);animation:pulse 2.4s ease-in-out infinite;}
   .status.err .led{background:var(--up);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
   @media (prefers-reduced-motion:reduce){.status.live .led{animation:none;}}
@@ -272,7 +273,8 @@ async function load(){
     paint('xaut', xaut.price, xaut.sma);
 
     statusEl.className = 'status live';
-    lastFetchText.textContent = 'Última atualização dos dados às ' + new Date().toLocaleTimeString('pt-BR');
+    // Formatação do texto alterada conforme solicitado
+    lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
   } catch(err) {
     statusEl.className = 'status err';
     lastFetchText.textContent = 'Falha: ' + err.message;
