@@ -309,6 +309,7 @@
     <script>
         let btcPrice = 0;
         let selectedCurrency = 'usd'; // 'usd' or 'brl'
+        let btcDataCurrency = 'usd'; // guarda em qual moeda os dados de btcData estao carregados
         
         let btcData = [];
         let xautData = [];
@@ -316,7 +317,7 @@
         let chartInstance = null;
         let currentPeriod = '24h';
         let currentView = 'btc'; // 'btc', 'xaut' or 'compare'
-        let dcaEntries = []; // { date, amount, currency, price, sats, approx }
+        let dcaEntries = []; // { date, amountUsd, amountBrl, sats, priceUsd, priceBrl, approx }
 
         // --- Preferências salvas (tema e moeda) ---
         function loadPrefs() {
@@ -625,7 +626,7 @@
         const fmtCurrency = (n, curr) => {
             const locale = curr === 'brl' ? 'pt-BR' : 'en-US';
             const symbol = curr === 'brl' ? 'R$' : '$';
-            return symbol + ' ' + n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return symbol + ' ' + (n || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -655,11 +656,27 @@
         function loadDcaEntries() {
             try {
                 const raw = localStorage.getItem('btcTracker.dcaEntries');
-                if (raw) dcaEntries = JSON.parse(raw);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    // Migra dados antigos (caso existam) para a estrutura nova multi-moeda
+                    dcaEntries = parsed.map(e => {
+                        if (e.amountUsd !== undefined) return e;
+                        const isBrl = e.currency === 'brl';
+                        return {
+                            date: e.date,
+                            amountUsd: isBrl ? 0 : e.amount,
+                            amountBrl: isBrl ? e.amount : 0,
+                            priceUsd: isBrl ? 0 : e.price,
+                            priceBrl: isBrl ? e.price : 0,
+                            sats: e.sats || 0,
+                            approx: e.approx || false
+                        };
+                    });
+                }
             } catch (e) { dcaEntries = []; }
         }
 
-        function addDcaEntry() {
+        async function addDcaEntry() {
             document.getElementById('dcaError').classList.add('hidden');
             const dateInput = document.getElementById('dcaDate');
             const amountInput = document.getElementById('dcaAmount');
@@ -669,17 +686,57 @@
             if (!dateStr) return showDcaError('Selecione uma data.');
             if (new Date(dateStr + 'T00:00:00Z').getTime() > Date.now()) return showDcaError('A data não pode ser no futuro.');
             if (!amount || amount <= 0) return showDcaError('Informe um valor investido válido.');
-            if (!btcData || btcData.length === 0) return showDcaError('Aguarde os dados de mercado carregarem antes de adicionar uma compra.');
 
-            const match = findClosestPrice(dateStr, btcData);
-            if (!match || !match.price) return showDcaError('Não foi possível estimar o preço do BTC para essa data.');
+            // Busca preço histórico em USD e em BRL para garantir suporte universal nas duas moedas
+            let matchCurrent = findClosestPrice(dateStr, btcData);
+            if (!matchCurrent || !matchCurrent.price) return showDcaError('Não foi possível estimar o preço do BTC para essa data.');
 
             const targetTs = new Date(dateStr + 'T00:00:00Z').getTime();
-            const approx = Math.abs(match.timestamp - targetTs) > 2 * 86400000; // fora da janela de dados diários
+            const approx = Math.abs(matchCurrent.timestamp - targetTs) > 2 * 86400000;
 
-            const sats = (amount / match.price) * 1e8;
+            let priceUsd = 0;
+            let priceBrl = 0;
+            let amountUsd = 0;
+            let amountBrl = 0;
 
-            dcaEntries.push({ date: dateStr, amount, currency: selectedCurrency, price: match.price, sats, approx });
+            if (btcDataCurrency === selectedCurrency) {
+                if (selectedCurrency === 'usd') {
+                    priceUsd = matchCurrent.price;
+                    amountUsd = amount;
+                } else {
+                    priceBrl = matchCurrent.price;
+                    amountBrl = amount;
+                }
+            }
+
+            // Se precisarmos do preço na moeda oposta para converter adequadamente
+            try {
+                const oppositeCurr = selectedCurrency === 'usd' ? 'brl' : 'usd';
+                const oppData = await getAssetData('bitcoin', '1', 'BTC', oppositeCurr);
+                const matchOpp = findClosestPrice(dateStr, oppData.rawPrices);
+
+                if (selectedCurrency === 'usd') {
+                    priceBrl = matchOpp ? matchOpp.price : priceUsd * 5.0; // fallback para taxa ~5.0
+                    amountBrl = amountUsd * (priceBrl / priceUsd);
+                } else {
+                    priceUsd = matchOpp ? matchOpp.price : priceBrl / 5.0;
+                    amountUsd = priceUsd > 0 ? amountBrl * (priceUsd / priceBrl) : amountBrl / 5.0;
+                }
+            } catch (err) {
+                console.warn('Erro ao buscar cotação da moeda oposta para a data. Usando estimativa atual.', err);
+                if (selectedCurrency === 'usd') {
+                    priceBrl = priceUsd * 5.0;
+                    amountBrl = amountUsd * 5.0;
+                } else {
+                    priceUsd = priceBrl / 5.0;
+                    amountUsd = amountBrl / 5.0;
+                }
+            }
+
+            const activePrice = selectedCurrency === 'usd' ? priceUsd : priceBrl;
+            const sats = (amount / activePrice) * 1e8;
+
+            dcaEntries.push({ date: dateStr, amountUsd, amountBrl, priceUsd, priceBrl, sats, approx });
             saveDcaEntries();
             renderDcaTable();
 
@@ -695,43 +752,43 @@
 
         function renderDcaTable() {
             const tbody = document.getElementById('dcaTableBody');
-            const noteEl = document.getElementById('dcaHiddenNote');
-            if (!tbody) return; // seção ainda não presente no DOM
+            if (!tbody) return;
+
+            const isUsd = selectedCurrency === 'usd';
 
             if (dcaEntries.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>';
             } else {
                 tbody.innerHTML = dcaEntries.map((e, idx) => {
-                    const dimmed = e.currency !== selectedCurrency;
                     const dateFmt = new Date(e.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
                     const btcAmount = e.sats / 1e8;
+                    const amount = isUsd ? e.amountUsd : e.amountBrl;
+                    const price = isUsd ? e.priceUsd : e.priceBrl;
+
                     return `
-                        <tr class="border-b border-gray-100 dark:border-dark-border/50 last:border-0 ${dimmed ? 'opacity-40' : ''}">
+                        <tr class="border-b border-gray-100 dark:border-dark-border/50 last:border-0">
                             <td class="py-2 px-3 font-mono text-xs">${dateFmt}</td>
-                            <td class="py-2 px-3 text-right font-mono text-xs">${fmtCurrency(e.amount, e.currency)}${e.approx ? ' *' : ''}</td>
-                            <td class="py-2 px-3 text-right font-mono text-xs text-gray-400">${fmtCurrency(e.price, e.currency)}</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs">${fmtCurrency(amount, selectedCurrency)}${e.approx ? ' *' : ''}</td>
+                            <td class="py-2 px-3 text-right font-mono text-xs text-gray-400">${fmtCurrency(price, selectedCurrency)}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs">${btcAmount.toFixed(8)} BTC</td>
                             <td class="py-2 px-3 text-right"><button onclick="removeDcaEntry(${idx})" class="text-gray-400 hover:text-up text-xs" title="Remover">✕</button></td>
                         </tr>`;
                 }).join('');
             }
 
-            // Resumo considera apenas compras registradas na moeda atualmente selecionada (BRL ou USD, conforme o toggle do topo)
-            const relevant = dcaEntries.filter(e => e.currency === selectedCurrency);
-            const hiddenCount = dcaEntries.length - relevant.length;
-
-            const totalInvested = relevant.reduce((sum, e) => sum + e.amount, 0);
-            const totalSats = relevant.reduce((sum, e) => sum + e.sats, 0);
+            // Resumo dinâmico baseado na moeda selecionada no topo
+            const totalInvested = dcaEntries.reduce((sum, e) => sum + (isUsd ? e.amountUsd : e.amountBrl), 0);
+            const totalSats = dcaEntries.reduce((sum, e) => sum + e.sats, 0);
             const totalBtc = totalSats / 1e8;
             const avgPrice = totalBtc > 0 ? totalInvested / totalBtc : 0;
 
-            document.getElementById('dcaTotalInvested').textContent = relevant.length ? fmtCurrency(totalInvested, selectedCurrency) : '—';
-            document.getElementById('dcaTotalBtc').textContent = relevant.length ? totalBtc.toFixed(8) + ' BTC' : '—';
-            document.getElementById('dcaAvgPrice').textContent = relevant.length ? fmtCurrency(avgPrice, selectedCurrency) : '—';
+            document.getElementById('dcaTotalInvested').textContent = dcaEntries.length ? fmtCurrency(totalInvested, selectedCurrency) : '—';
+            document.getElementById('dcaTotalBtc').textContent = dcaEntries.length ? totalBtc.toFixed(8) + ' BTC' : '—';
+            document.getElementById('dcaAvgPrice').textContent = dcaEntries.length ? fmtCurrency(avgPrice, selectedCurrency) : '—';
             document.getElementById('dcaCurrentPrice').textContent = btcPrice > 0 ? fmtCurrency(btcPrice, selectedCurrency) : '—';
 
             const profitEl = document.getElementById('dcaProfitPct');
-            if (relevant.length && btcPrice > 0 && avgPrice > 0) {
+            if (dcaEntries.length && btcPrice > 0 && avgPrice > 0) {
                 const pct = ((btcPrice - avgPrice) / avgPrice) * 100;
                 const sign = pct >= 0 ? '+' : '';
                 profitEl.textContent = `${sign}${pct.toFixed(2)}%`;
@@ -739,14 +796,6 @@
             } else {
                 profitEl.textContent = '—';
                 profitEl.className = 'font-serif text-xl';
-            }
-
-
-            if (hiddenCount > 0) {
-                noteEl.textContent = `${hiddenCount} compra(s) registrada(s) em outra moeda não entram neste resumo. Troque a moeda no topo para vê-las.`;
-                noteEl.classList.remove('hidden');
-            } else {
-                noteEl.classList.add('hidden');
             }
         }
 
@@ -880,9 +929,7 @@
             }
         }
 
-        // Contador de geração: cada chamada a loadTrackerData recebe um número.
-        // Se uma chamada mais nova começar antes de uma antiga terminar, a antiga é descartada
-        // ao concluir — evita misturar dados de USD com BRL quando o usuário troca de moeda rápido.
+        // Contador de geração para descartar chamadas obsoletas
         let fetchGeneration = 0;
 
         async function loadTrackerData() {
@@ -900,9 +947,10 @@
 
             try {
                 const btc = await getAssetData('bitcoin', '1', 'BTC', requestCurrency);
-                if (myGen !== fetchGeneration) return; // uma busca mais nova já assumiu
+                if (myGen !== fetchGeneration) return;
                 results.btc = btc;
                 btcData = btc.rawPrices;
+                btcDataCurrency = requestCurrency;
                 updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h, requestCurrency);
                 updateHalvingCountdown();
             } catch (err) {
