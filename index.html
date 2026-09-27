@@ -63,269 +63,310 @@
             display: inline-flex;
             align-items: center;
             justify-content: flex-start;
-            padding: 16px 0;
+            padding: 8px 0;
             font-family: 'IBM Plex Mono', monospace;
             font-weight: 700;
             font-size: 22px;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color: #e08a3e;
-            cursor: default;
+            cursor: pointer;
+        }
+
+        /* Nav Tab Styles */
+        .nav-tab {
+            position: relative;
+            padding: 0.5rem 0.85rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #8890a0;
+            transition: all 0.2s ease;
+            border-radius: 0.5rem;
+        }
+        .nav-tab:hover {
+            color: #e08a3e;
+        }
+        .nav-tab.active {
+            color: #e08a3e;
+            background-color: rgba(224, 138, 62, 0.1);
+            font-weight: 600;
+        }
+
+        .page-view {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.25s ease-in-out;
+        }
+        .page-view.active {
+            display: block;
+            opacity: 1;
         }
     </style>
 </head>
-<body class="bg-white dark:bg-dark-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-500 antialiased selection:bg-btc/20 selection:text-btc">
+<body class="bg-dark-900 text-gray-100 font-sans transition-colors duration-500 antialiased selection:bg-btc/20 selection:text-btc min-h-screen flex flex-col justify-between">
 
-    <!-- Header Minimalista -->
-    <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
-        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
-            <!-- Botão BitBunker -->
-            <span id="bitBunkerBtn" class="brand-logo select-none">BitBunker</span>
+    <!-- Header Minimalista com Navegação -->
+    <header class="fixed top-0 inset-x-0 z-50 bg-dark-900/90 backdrop-blur-md border-b border-dark-border transition-colors">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+            
+            <!-- Logo BitBunker -->
+            <span onclick="navigateTo('overview')" class="brand-logo select-none shrink-0" title="Voltar ao Overview">BitBunker</span>
 
-            <div class="flex items-center gap-4">
-            <!-- Botão Seletor de Moeda Pequeno -->
-            <div class="flex items-center bg-gray-100 dark:bg-dark-700 p-0.5 rounded-lg border border-gray-200 dark:border-dark-border text-[10px] font-mono">
-                <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-1.5 py-0.5 rounded bg-btc text-white font-medium transition">USD</button>
-                <button id="currBrlBtn" onclick="setCurrency('brl')" class="px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition">BRL</button>
-            </div>
+            <!-- Menu Superior de Páginas -->
+            <nav class="flex items-center gap-1 sm:gap-2 font-mono text-xs sm:text-sm">
+                <button onclick="navigateTo('overview')" id="nav-overview" class="nav-tab active">Overview</button>
+                <button onclick="navigateTo('comparativo')" id="nav-comparativo" class="nav-tab">Comparativo</button>
+                <button onclick="navigateTo('calculadora')" id="nav-calculadora" class="nav-tab">Calculadora</button>
+            </nav>
 
-            <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
-                <span class="dark:hidden">Modo Escuro</span>
-                <span class="hidden dark:inline">Modo Claro</span>
-            </button>
+            <!-- Controles Auxiliares (Moeda) -->
+            <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                <!-- Botão Seletor de Moeda Pequeno -->
+                <div class="flex items-center bg-dark-700 p-0.5 rounded-lg border border-dark-border text-[10px] font-mono">
+                    <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-1.5 py-0.5 rounded bg-btc text-white font-medium transition">USD</button>
+                    <button id="currBrlBtn" onclick="setCurrency('brl')" class="px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition">BRL</button>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="pt-20">
-        <!-- Seção BTC / XAUt Tracker -->
-        <section id="tracker" class="py-12 bg-gray-50/50 dark:bg-dark-800/30">
-            <div class="max-w-5xl mx-auto px-6">
-                
-                <!-- Divisória da Métrica Global (Topo) -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-gray-200 dark:border-dark-border gap-4">
-                    <div>
-                        <h2 class="text-xl font-serif mt-1">BTC x Tether Gold</h2>
-                    </div>
+    <!-- Conteúdo Principal Dinâmico -->
+    <main class="pt-20 pb-6 flex-grow">
+        
+        <!-- PÁGINA 1: OVERVIEW -->
+        <div id="page-overview" class="page-view active">
+            <section class="py-2">
+                <div class="max-w-5xl mx-auto px-6">
                     
-                    <div class="flex flex-col sm:items-end gap-1">
-                        <div class="status flex items-center gap-2 text-[11px] font-mono text-gray-400 dark:text-gray-500" id="status">
-                            <span class="led"></span>
-                            <span id="lastFetchText">Iniciando consulta às cotações...</span>
+                    <!-- Divisória da Métrica Global (Topo) -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-dark-border gap-4">
+                        <div>
+                            <h1 class="text-2xl font-serif mt-1">BTC x Tether Gold</h1>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Aviso de Dados Simulados (fallback) -->
-                <div id="simulatedWarning" class="hidden mb-6 px-4 py-2.5 rounded-lg bg-xaut/10 border border-xaut/30 text-xs font-mono text-xaut">
-                    ⚠ Fonte principal indisponível: o histórico usado no gráfico/MM200 para <span id="simulatedAssets"></span> foi <strong>simulado</strong> a partir do preço atual (fonte de fallback não fornece série histórica gratuita). Os valores de preço e ATH continuam reais.
-                </div>
-
-                <!-- Ticker Rows -->
-                <div class="divide-y divide-gray-200 dark:divide-dark-border border-y border-gray-200 dark:border-dark-border">
-                    <!-- Bitcoin Row -->
-                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
-                        <div class="flex items-center gap-3">
-                            <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
-                            <div>
-                                <div class="font-medium text-sm">Bitcoin</div>
-                                <div class="text-xs font-mono text-gray-400">BTC</div>
+                        
+                        <div class="flex flex-col sm:items-end gap-1">
+                            <div class="status flex items-center gap-2 text-[11px] font-mono text-gray-500" id="status">
+                                <span class="led"></span>
+                                <span id="lastFetchText">Iniciando consulta às cotações...</span>
                             </div>
                         </div>
-                        <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-base font-medium" id="btcPriceOut">Carregando...</div>
-                            <div class="text-[10px] font-mono" id="btcChangeOut">—</div>
-                        </div>
-                        <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-base font-medium" id="btcAthOut">—</div>
-                            <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="btcAthDate">—</div>
-                        </div>
-                        <!-- Próximo Halving Posicionado ao lado do ATH -->
-                        <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Próximo Halving</div>
-                            <div class="font-mono text-sm font-semibold text-btc" id="timeToHalvingOut">Calculando...</div>
-                        </div>
-                        <div class="md:text-right">
-                            <div class="font-serif text-xl" id="btcMM">—</div>
-                            <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
-                        </div>
-                        <div class="col-span-2 sm:col-span-1 md:justify-self-end">
-                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
-                        </div>
                     </div>
 
-                    <!-- Tether Gold Row -->
-                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
-                        <div class="flex items-center gap-3">
-                            <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
-                            <div>
-                                <div class="font-medium text-sm">Tether Gold</div>
-                                <div class="text-xs font-mono text-gray-400">XAUT</div>
+                    <!-- Aviso de Dados Simulados (fallback) -->
+                    <div id="simulatedWarning" class="hidden mb-4 px-4 py-2.5 rounded-lg bg-xaut/10 border border-xaut/30 text-xs font-mono text-xaut">
+                        ⚠ Fonte principal indisponível: o histórico usado no gráfico/MM200 para <span id="simulatedAssets"></span> foi <strong>simulado</strong> a partir do preço atual (fonte de fallback não fornece série histórica gratuita). Os valores de preço e ATH continuam reais.
+                    </div>
+
+                    <!-- Ticker Rows -->
+                    <div class="divide-y divide-dark-border border-y border-dark-border">
+                        <!-- Bitcoin Row -->
+                        <div class="py-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
+                            <div class="flex items-center gap-3">
+                                <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
+                                <div>
+                                    <div class="font-medium text-sm">Bitcoin</div>
+                                    <div class="text-xs font-mono text-gray-400">BTC</div>
+                                </div>
+                            </div>
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="btcPriceOut">Carregando...</div>
+                                <div class="text-[10px] font-mono" id="btcChangeOut">—</div>
+                            </div>
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="btcAthOut">—</div>
+                                <div class="text-[10px] font-mono text-gray-500" id="btcAthDate">—</div>
+                            </div>
+                            <!-- Próximo Halving Posicionado ao lado do ATH -->
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Próximo Halving</div>
+                                <div class="font-mono text-sm font-semibold text-btc" id="timeToHalvingOut">Calculando...</div>
+                            </div>
+                            <div class="md:text-right">
+                                <div class="font-serif text-xl" id="btcMM">—</div>
+                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
+                            </div>
+                            <div class="col-span-2 sm:col-span-1 md:justify-self-end">
+                                <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
                             </div>
                         </div>
-                        <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-base font-medium" id="xautPriceOut">Carregando...</div>
-                            <div class="text-[10px] font-mono" id="xautChangeOut">—</div>
-                        </div>
-                        <div class="md:text-center">
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-base font-medium" id="xautAthOut">—</div>
-                            <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="xautAthDate">—</div>
-                        </div>
-                        <!-- Célula vazia para alinhar a grade com a linha do BTC -->
-                        <div class="hidden md:block"></div>
-                        <div class="md:text-right">
-                            <div class="font-serif text-xl" id="xautMM">—</div>
-                            <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
-                        </div>
-                        <div class="col-span-2 sm:col-span-1 md:justify-self-end">
-                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
-                        </div>
-                    </div>
-                </div>
 
-            </div>
-        </section>
-
-        <!-- Seção Cotação & Gráfico de Comparação -->
-        <section id="cotacao" class="border-t border-gray-100 dark:border-dark-border pt-6 pb-16 bg-gray-50/50 dark:bg-dark-800/20">
-            <div class="max-w-5xl mx-auto px-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                    <div>
-                        <h2 class="text-xl font-serif mt-1">Comparativo BTC vs. XAUT</h2>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
-                        <!-- Seletor de Visão (BTC / XAU / Comparação) -->
-                        <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded-xl">
-                            <button onclick="changeView('btc', event)" class="view-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">BTC</button>
-                            <button onclick="changeView('xaut', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">XAU</button>
-                            <button onclick="changeView('compare', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">BTC vs. XAUt</button>
+                        <!-- Tether Gold Row -->
+                        <div class="py-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
+                            <div class="flex items-center gap-3">
+                                <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
+                                <div>
+                                    <div class="font-medium text-sm">Tether Gold</div>
+                                    <div class="text-xs font-mono text-gray-400">XAUT</div>
+                                </div>
+                            </div>
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="xautPriceOut">Carregando...</div>
+                                <div class="text-[10px] font-mono" id="xautChangeOut">—</div>
+                            </div>
+                            <div class="md:text-center">
+                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
+                                <div class="font-mono text-base font-medium" id="xautAthOut">—</div>
+                                <div class="text-[10px] font-mono text-gray-500" id="xautAthDate">—</div>
+                            </div>
+                            <div class="hidden md:block"></div>
+                            <div class="md:text-right">
+                                <div class="font-serif text-xl" id="xautMM">—</div>
+                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Múltiplo MM200 ⓘ</div>
+                            </div>
+                            <div class="col-span-2 sm:col-span-1 md:justify-self-end">
+                                <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
+                            </div>
                         </div>
                     </div>
+
                 </div>
+            </section>
+        </div>
 
-                <!-- Legenda de cores por faixa de MM200 (só nas visões individuais) -->
-                <div id="chartColorLegend" class="mb-4 flex flex-wrap items-center gap-4 text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#5fa87f"></span>Verde: MM200 &lt; 1.0x</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#eab308"></span>Amarelo: MM200 entre 1.0x e 2.0x</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#c15c52"></span>Vermelho: MM200 ≥ 2.0x</span>
-                </div>
-
-                <!-- Barra de Seleção de Período -->
-                <div class="mb-8 flex overflow-x-auto pb-2">
-                    <div class="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100/80 dark:bg-dark-800/80 border border-slate-200/50 dark:border-dark-border/60 text-xs font-medium text-slate-600 dark:text-gray-300">
-                        <button onclick="changeChartPeriod('24h', event)" class="chart-btn px-3.5 py-1.5 rounded-xl bg-white dark:bg-dark-700 text-slate-900 dark:text-white font-semibold shadow-sm transition">24h</button>
-                        <button onclick="changeChartPeriod('7d', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">7d</button>
-                        <button onclick="changeChartPeriod('1m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">1M</button>
-                        <button onclick="changeChartPeriod('3m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">3M</button>
-                        <button onclick="changeChartPeriod('ytd', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">Acumulado no ano</button>
-                        <button onclick="changeChartPeriod('1a', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">1A</button>
-                        <button onclick="changeChartPeriod('max', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition">Máx</button>
-                    </div>
-                </div>
-
-                <!-- Comparison Line Chart Ampliado -->
-                <div class="w-full">
-                    <div class="h-96 w-full">
-                        <canvas id="comparisonChart"></canvas>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        <!-- Seção Calculadora de Preço Médio (DCA) -->
-        <section id="calculadora" class="py-16 bg-white dark:bg-dark-900">
-            <div class="max-w-5xl mx-auto px-6">
-                <div class="mb-8">
-                    <span class="text-xs font-mono text-btc tracking-widest uppercase block">Ferramenta</span>
-                    <h2 class="text-xl font-serif mt-1">Calculadora de Preço Médio (BTC)</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-2xl">Registre suas compras por data e valor investido. A calculadora estima o preço histórico do BTC em cada data, converte para satoshis e compara seu preço médio com a cotação atual.</p>
-                </div>
-
-                <!-- Formulário de entrada -->
-                <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mb-3 items-end">
-                    <div>
-                        <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Data da compra</label>
-                        <input type="date" id="dcaDate" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Valor investido (<span class="currencyLabel">USD</span>)</label>
-                        <input type="number" id="dcaAmount" placeholder="Ex: 500" min="0" step="0.01" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
-                    </div>
-                    <button onclick="addDcaEntry()" class="px-4 py-2 rounded-lg bg-btc text-white text-sm font-medium hover:opacity-90 transition whitespace-nowrap">+ Adicionar compra</button>
-                </div>
-                <div id="dcaError" class="hidden text-xs font-mono text-up mb-4"></div>
-                <div id="dcaHiddenNote" class="hidden text-[11px] font-mono text-gray-400 mb-4"></div>
-
-                <!-- Tabela de compras -->
-                <div class="overflow-x-auto mb-8 border border-gray-200 dark:border-dark-border rounded-lg">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-[10px] font-mono uppercase text-gray-400 border-b border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-800/30">
-                                <th class="text-left py-2.5 px-3">Data</th>
-                                <th class="text-right py-2.5 px-3">Valor investido</th>
-                                <th class="text-right py-2.5 px-3">Preço na data (est.)</th>
-                                <th class="text-right py-2.5 px-3">BTC</th>
-                                <th class="py-2.5 px-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="dcaTableBody">
-                            <tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="text-[10px] font-mono text-gray-400 -mt-6 mb-8">* Data fora da janela de histórico disponível (365 dias); preço estimado pelo ponto mais próximo.</div>
-
-                <!-- Resumo -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-gray-200 dark:border-dark-border pt-6">
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total investido</div>
-                        <div class="font-mono text-base font-medium" id="dcaTotalInvested">—</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total em BTC</div>
-                        <div class="font-mono text-base font-medium" id="dcaTotalBtc">—</div>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago <span class="normal-case text-gray-300 dark:text-gray-600">vs. atual</span></div>
-                        <div class="flex items-baseline gap-2 flex-wrap">
-                            <span class="font-mono text-base font-medium" id="dcaAvgPrice">—</span>
-                            <span class="text-gray-300 dark:text-gray-600 text-xs">→</span>
-                            <span class="font-mono text-base font-medium text-btc" id="dcaCurrentPrice">—</span>
+        <!-- PÁGINA 2: COMPARATIVO -->
+        <div id="page-comparativo" class="page-view">
+            <section class="py-2">
+                <div class="max-w-5xl mx-auto px-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                        <div>
+                            <h1 class="text-2xl font-serif mt-1">Comparativo BTC vs. XAUT</h1>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
+                            <!-- Seletor de Visão (BTC / XAU / Comparação) -->
+                            <div class="flex bg-dark-700 p-1 rounded-xl border border-dark-border">
+                                <button onclick="changeView('btc', event)" class="view-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">BTC</button>
+                                <button onclick="changeView('xaut', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-400 hover:text-white font-medium transition">XAU</button>
+                                <button onclick="changeView('compare', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-400 hover:text-white font-medium transition">BTC vs. XAUt</button>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Resultado vs. preço atual</div>
-                        <div class="font-serif text-xl" id="dcaProfitPct">—</div>
+
+                    <!-- Legenda de cores por faixa de MM200 (só nas visões individuais) -->
+                    <div id="chartColorLegend" class="mb-3 flex flex-wrap items-center gap-4 text-[11px] font-mono text-gray-400">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#5fa87f"></span>Verde: MM200 &lt; 1.0x</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#eab308"></span>Amarelo: MM200 entre 1.0x e 2.0x</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#c15c52"></span>Vermelho: MM200 &ge; 2.0x</span>
+                    </div>
+
+                    <!-- Barra de Seleção de Período -->
+                    <div class="mb-5 flex overflow-x-auto pb-1">
+                        <div class="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-dark-800 border border-dark-border/60 text-xs font-medium text-gray-300">
+                            <button onclick="changeChartPeriod('24h', event)" class="chart-btn px-3.5 py-1.5 rounded-xl bg-dark-700 text-white font-semibold shadow-sm transition">24h</button>
+                            <button onclick="changeChartPeriod('7d', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">7d</button>
+                            <button onclick="changeChartPeriod('1m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">1M</button>
+                            <button onclick="changeChartPeriod('3m', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">3M</button>
+                            <button onclick="changeChartPeriod('ytd', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">Acumulado no ano</button>
+                            <button onclick="changeChartPeriod('1a', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">1A</button>
+                            <button onclick="changeChartPeriod('max', event)" class="chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition">Máx</button>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Line Chart Ampliado -->
+                    <div class="w-full bg-dark-800/40 p-4 rounded-2xl border border-dark-border">
+                        <div class="h-80 w-full">
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+
+        <!-- PÁGINA 3: CALCULADORA -->
+        <div id="page-calculadora" class="page-view">
+            <section class="py-2">
+                <div class="max-w-5xl mx-auto px-6">
+                    <div class="mb-5">
+                        <h1 class="text-2xl font-serif mt-1">Calculadora de Preço Médio (DCA)</h1>
+                        <p class="text-sm text-gray-400 mt-1 max-w-2xl">Registre suas compras por data e valor investido. A calculadora estima o preço histórico do BTC em cada data, converte para satoshis e compara seu preço médio com a cotação atual.</p>
+                    </div>
+
+                    <!-- Formulário de entrada -->
+                    <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mb-3 items-end">
+                        <div>
+                            <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Data da compra</label>
+                            <input type="date" id="dcaDate" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Valor investido (<span class="currencyLabel">USD</span>)</label>
+                            <input type="number" id="dcaAmount" placeholder="Ex: 500" min="0" step="0.01" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                        </div>
+                        <button onclick="addDcaEntry()" class="px-4 py-2 rounded-lg bg-btc text-white text-sm font-medium hover:opacity-90 transition whitespace-nowrap">+ Adicionar compra</button>
+                    </div>
+                    <div id="dcaError" class="hidden text-xs font-mono text-up mb-3"></div>
+                    <div id="dcaHiddenNote" class="hidden text-[11px] font-mono text-gray-400 mb-3"></div>
+
+                    <!-- Tabela de compras -->
+                    <div class="overflow-x-auto mb-5 border border-dark-border rounded-lg">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-[10px] font-mono uppercase text-gray-400 border-b border-dark-border bg-dark-800/30">
+                                    <th class="text-left py-2.5 px-3">Data</th>
+                                    <th class="text-right py-2.5 px-3">Valor investido</th>
+                                    <th class="text-right py-2.5 px-3">Preço na data (est.)</th>
+                                    <th class="text-right py-2.5 px-3">BTC</th>
+                                    <th class="py-2.5 px-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dcaTableBody">
+                                <tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-[10px] font-mono text-gray-400 -mt-3 mb-5">* Data fora da janela de histórico disponível (365 dias); preço estimado pelo ponto mais próximo.</div>
+
+                    <!-- Resumo -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-dark-border pt-4">
+                        <div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total investido</div>
+                            <div class="font-mono text-base font-medium" id="dcaTotalInvested">—</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Total em BTC</div>
+                            <div class="font-mono text-base font-medium" id="dcaTotalBtc">—</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago <span class="normal-case text-gray-600">vs. atual</span></div>
+                            <div class="flex items-baseline gap-2 flex-wrap">
+                                <span class="font-mono text-base font-medium" id="dcaAvgPrice">—</span>
+                                <span class="text-gray-600 text-xs">&rarr;</span>
+                                <span class="font-mono text-base font-medium text-btc" id="dcaCurrentPrice">—</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Resultado vs. preço atual</div>
+                            <div class="font-serif text-xl" id="dcaProfitPct">—</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
+
     </main>
 
     <!-- Footer Minimalista -->
-    <footer class="border-t border-gray-100 dark:border-dark-border py-16">
-        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-400 font-mono">
+    <footer class="border-t border-dark-border py-6 bg-dark-900">
+        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400 font-mono">
             <div>
                 Made by Pk · In God We Trust · Brazil 2026
             </div>
-            <div class="flex space-x-6">
-                <a href="#tracker" class="hover:text-btc transition">Dashboard</a>
-                <a href="#cotacao" class="hover:text-btc transition">Mercado</a>
-                <a href="#calculadora" class="hover:text-btc transition">Calculadora</a>
+            <div class="flex items-center space-x-6">
+                <button onclick="navigateTo('overview')" id="footer-nav-overview" class="hover:text-btc transition">Overview</button>
+                <button onclick="navigateTo('comparativo')" id="footer-nav-comparativo" class="hover:text-btc transition">Comparativo</button>
+                <button onclick="navigateTo('calculadora')" id="footer-nav-calculadora" class="hover:text-btc transition">Calculadora</button>
             </div>
         </div>
     </footer>
 
-    <!-- Logic Script -->
+    <!-- Application Logic Script -->
     <script>
         let btcPrice = 0;
         let selectedCurrency = 'usd'; // 'usd' or 'brl'
+        let activePage = 'overview'; // 'overview', 'comparativo', 'calculadora'
         
         let btcData = [];
         let xautData = [];
@@ -335,27 +376,53 @@
         let currentView = 'btc'; // 'btc', 'xaut' or 'compare'
         let dcaEntries = []; // { date, amount, currency, price, sats, approx }
 
-        // --- Preferências salvas (tema e moeda) ---
-        function loadPrefs() {
-            try {
-                const savedTheme = localStorage.getItem('btcTracker.theme');
-                if (savedTheme === 'light') document.documentElement.classList.remove('dark');
-                if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+        // --- Navegação entre Páginas ---
+        function navigateTo(pageId) {
+            if (!['overview', 'comparativo', 'calculadora'].includes(pageId)) return;
+            activePage = pageId;
 
-                const savedCurr = localStorage.getItem('btcTracker.currency');
-                if (savedCurr === 'brl' || savedCurr === 'usd') selectedCurrency = savedCurr;
-            } catch (e) { /* localStorage indisponível: segue com defaults */ }
+            // Esconde todas as páginas e desativa abas
+            document.querySelectorAll('.page-view').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('footer button').forEach(btn => {
+                btn.classList.remove('text-btc', 'font-semibold');
+            });
+
+            // Ativa a página alvo
+            const targetPage = document.getElementById(`page-${pageId}`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Destaca botões de navegação no header e footer
+            const headerBtn = document.getElementById(`nav-${pageId}`);
+            if (headerBtn) headerBtn.classList.add('active');
+
+            const footerBtn = document.getElementById(`footer-nav-${pageId}`);
+            if (footerBtn) footerBtn.classList.add('text-btc', 'font-semibold');
+
+            // Redimensiona o gráfico se o usuário navegar para o Comparativo
+            if (pageId === 'comparativo') {
+                setTimeout(() => {
+                    renderChart();
+                }, 50);
+            }
+
+            // Scroll suave para o topo ao trocar de página
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // --- Dark Mode Switcher ---
-        const themeToggleBtn = document.getElementById('themeToggle');
-        themeToggleBtn.addEventListener('click', () => {
-            document.documentElement.classList.toggle('dark');
+        // --- Preferências salvas ---
+        function loadPrefs() {
             try {
-                localStorage.setItem('btcTracker.theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-            } catch (e) {}
-            renderChart();
-        });
+                const savedCurr = localStorage.getItem('btcTracker.currency');
+                if (savedCurr === 'brl' || savedCurr === 'usd') selectedCurrency = savedCurr;
+            } catch (e) { /* localStorage indisponível */ }
+        }
 
         // --- Currency Switcher ---
         function updateCurrencyButtons(curr) {
@@ -364,10 +431,10 @@
 
             if (curr === 'usd') {
                 usdBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
-                brlBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+                brlBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition';
             } else {
                 brlBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
-                usdBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-gray-900 dark:hover:text-white transition';
+                usdBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition';
             }
             document.querySelectorAll('.currencyLabel').forEach(el => el.textContent = curr.toUpperCase());
         }
@@ -378,7 +445,6 @@
             try { localStorage.setItem('btcTracker.currency', curr); } catch (e) {}
             updateCurrencyButtons(curr);
 
-            // Evita mostrar o valor da moeda antiga com o rótulo da moeda nova enquanto a busca não termina
             ['btcPriceOut', 'btcAthOut', 'xautPriceOut', 'xautAthOut'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = 'Atualizando...';
@@ -444,7 +510,6 @@
             return arr;
         }
 
-        // Cor da linha de preço conforme a faixa da MM200 (Mayer Multiple) naquele ponto
         function colorForMayer(val) {
             if (val >= 2.0) return '#c15c52';   // vermelho: esticado
             if (val >= 1.0) return '#eab308';   // amarelo: faixa intermediária
@@ -453,10 +518,11 @@
 
         // --- Chart Rendering ---
         function renderChart() {
-            const ctx = document.getElementById('comparisonChart').getContext('2d');
-            const isDark = document.documentElement.classList.contains('dark');
-            const gridColor = isDark ? '#22262f' : '#f0f0f0';
-            const textColor = isDark ? '#5c6270' : '#a3a3a3';
+            const chartCanvas = document.getElementById('comparisonChart');
+            if (!chartCanvas) return;
+            const ctx = chartCanvas.getContext('2d');
+            const gridColor = '#22262f';
+            const textColor = '#5c6270';
 
             if (chartInstance) chartInstance.destroy();
 
@@ -503,12 +569,11 @@
                     }
                 ];
             } else {
-                // Visões individuais (BTC ou XAUT): linha contínua colorida pela faixa da MM200
                 singleAxis = true;
                 const rawData = currentView === 'btc' ? btcData : xautData;
                 const assetLabel = currentView === 'btc' ? 'BTC' : 'XAUT';
                 const priceSeries = priceSeriesFor(rawData);
-                const mayerAligned = mayerSeriesFor(rawData); // mesmo índice/tamanho que priceSeries
+                const mayerAligned = mayerSeriesFor(rawData);
 
                 labels = priceSeries.map(item => item.timestamp);
                 datasets = [{
@@ -555,9 +620,9 @@
                             }
                         },
                         tooltip: {
-                            backgroundColor: isDark ? '#0e1117' : '#ffffff',
-                            titleColor: isDark ? '#8890a0' : '#525252',
-                            bodyColor: isDark ? '#ffffff' : '#000000',
+                            backgroundColor: '#0e1117',
+                            titleColor: '#8890a0',
+                            bodyColor: '#ffffff',
                             borderColor: gridColor,
                             borderWidth: 1,
                             callbacks: {
@@ -622,31 +687,28 @@
             currentView = view;
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.classList.remove('active', 'bg-btc', 'text-white');
-                btn.classList.add('text-gray-500', 'dark:text-gray-400');
+                btn.classList.add('text-gray-400');
             });
             evt.target.classList.add('active', 'bg-btc', 'text-white');
-            evt.target.classList.remove('text-gray-500', 'dark:text-gray-400');
+            evt.target.classList.remove('text-gray-400');
             renderChart();
         }
 
         function changeChartPeriod(period, evt) {
             currentPeriod = period;
             document.querySelectorAll('.chart-btn').forEach(btn => {
-                btn.className = "chart-btn px-3.5 py-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white transition";
+                btn.className = "chart-btn px-3.5 py-1.5 rounded-xl hover:text-white transition";
             });
-            evt.target.className = "chart-btn px-3.5 py-1.5 rounded-xl bg-white dark:bg-dark-700 text-slate-900 dark:text-white font-semibold shadow-sm transition";
+            evt.target.className = "chart-btn px-3.5 py-1.5 rounded-xl bg-dark-700 text-white font-semibold shadow-sm transition";
             renderChart();
         }
 
-        // --- Ordem de prioridade dos provedores: CoinGecko > CoinMarketCap > TradingView ---
         const fmtCurrency = (n, curr) => {
             const locale = curr === 'brl' ? 'pt-BR' : 'en-US';
             const symbol = curr === 'brl' ? 'R$' : '$';
             return symbol + ' ' + n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
-        // fetch com timeout: evita que uma fonte lenta ou travada prenda a fila de fallback
-        // por muito tempo antes de desistir e tentar a próxima fonte.
         function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -699,7 +761,7 @@
             if (!match || !match.price) return showDcaError('Não foi possível estimar o preço do BTC para essa data.');
 
             const targetTs = new Date(dateStr + 'T00:00:00Z').getTime();
-            const approx = Math.abs(match.timestamp - targetTs) > 2 * 86400000; // fora da janela de dados diários
+            const approx = Math.abs(match.timestamp - targetTs) > 2 * 86400000;
 
             const sats = (amount / match.price) * 1e8;
 
@@ -720,7 +782,7 @@
         function renderDcaTable() {
             const tbody = document.getElementById('dcaTableBody');
             const noteEl = document.getElementById('dcaHiddenNote');
-            if (!tbody) return; // seção ainda não presente no DOM
+            if (!tbody) return;
 
             if (dcaEntries.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs font-mono">Nenhuma compra adicionada ainda.</td></tr>';
@@ -740,7 +802,6 @@
                 }).join('');
             }
 
-            // Resumo considera apenas compras registradas na moeda atualmente selecionada (BRL ou USD, conforme o toggle do topo)
             const relevant = dcaEntries.filter(e => e.currency === selectedCurrency);
             const hiddenCount = dcaEntries.length - relevant.length;
 
@@ -765,7 +826,6 @@
                 profitEl.className = 'font-serif text-xl';
             }
 
-
             if (hiddenCount > 0) {
                 noteEl.textContent = `${hiddenCount} compra(s) registrada(s) em outra moeda não entram neste resumo. Troque a moeda no topo para vê-las.`;
                 noteEl.classList.remove('hidden');
@@ -780,8 +840,7 @@
             return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
         }
 
-        // --- Data Fetching Logic (CoinGecko -> CoinMarketCap -> TradingView, nessa ordem) ---
-
+        // --- Data Fetching Logic (CoinGecko -> CryptoCompare -> Exchange -> CMC -> TV) ---
         const TV_TICKERS = {
             BTC: {
                 usd: ['BINANCE:BTCUSDT', 'COINBASE:BTCUSD', 'BITSTAMP:BTCUSD'],
@@ -803,8 +862,6 @@
             const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
             const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
 
-            // As duas chamadas são independentes, então rodam em paralelo em vez de
-            // sequenciais com um delay artificial entre elas (isso já cortava ~0.5s+ por ativo).
             const [resChart, resCoin] = await Promise.all([
                 fetchWithTimeout(urlChart),
                 fetchWithTimeout(urlCoin)
@@ -835,6 +892,163 @@
             };
         }
 
+        async function fetchCryptoCompareAsset(symbol, vsCurrency) {
+            const fsym = symbol.toUpperCase();
+            const tsym = vsCurrency.toUpperCase();
+            const url = `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=${fsym}&tsyms=${tsym}`;
+            const res = await fetchWithTimeout(url, {}, 5000);
+            if (!res.ok) throw new Error(`CryptoCompare Status ${res.status}`);
+            const data = await res.json();
+            const info = data?.RAW?.[fsym]?.[tsym];
+            if (!info || !info.PRICE) throw new Error(`Sem dados CryptoCompare para ${fsym}/${tsym}`);
+
+            const currentPrice = info.PRICE;
+            const change24h = info.CHANGEPCT24HOUR ?? null;
+            const athVal = info.HIGH24HOUR ? Math.max(info.HIGH24HOUR, currentPrice) : currentPrice;
+            
+            const now = Date.now();
+            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                now - (365 - i) * 86400000,
+                currentPrice * (0.88 + Math.random() * 0.24)
+            ]);
+            simulatedPrices[364] = [now, currentPrice];
+
+            return {
+                price: currentPrice,
+                sma: sma200(simulatedPrices),
+                rawPrices: simulatedPrices,
+                ath: athVal,
+                athDateRaw: null,
+                athDate: 'N/A',
+                change24h: change24h,
+                simulated: true,
+                source: 'CryptoCompare'
+            };
+        }
+
+        async function fetchUsdBrlRate() {
+            try {
+                const res = await fetchWithTimeout('https://economia.awesomeapi.com.br/last/USD-BRL', {}, 3000);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.USDBRL?.bid) return parseFloat(data.USDBRL.bid);
+                }
+            } catch (e) {}
+            return 5.8; // Fallback para cotação USD/BRL
+        }
+
+        async function fetchExchangeAsset(symbol, vsCurrency) {
+            if (symbol === 'BTC') {
+                const pair = vsCurrency === 'brl' ? 'BTCBRL' : 'BTCUSDT';
+                const res = await fetchWithTimeout(`https://api.binance.com/api/v3/ticker/24hr?symbol=${pair}`, {}, 4000);
+                if (!res.ok) throw new Error(`Binance Status ${res.status}`);
+                const data = await res.json();
+                const price = parseFloat(data.lastPrice);
+                const change24h = parseFloat(data.priceChangePercent);
+                const now = Date.now();
+                const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                    now - (365 - i) * 86400000,
+                    price * (0.85 + Math.random() * 0.3)
+                ]);
+                simulatedPrices[364] = [now, price];
+                return {
+                    price,
+                    sma: sma200(simulatedPrices),
+                    rawPrices: simulatedPrices,
+                    ath: parseFloat(data.highPrice) || price,
+                    athDateRaw: null,
+                    athDate: 'N/A',
+                    change24h,
+                    simulated: true,
+                    source: 'Binance'
+                };
+            } else if (symbol === 'XAUT') {
+                try {
+                    const res = await fetchWithTimeout('https://api.gateio.ws/api/v4/spot/tickers?currency_pair=XAUT_USDT', {}, 4000);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data[0] && data[0].last) {
+                            let price = parseFloat(data[0].last);
+                            let change24h = parseFloat(data[0].change_percentage);
+                            if (vsCurrency === 'brl') {
+                                const usdBrl = await fetchUsdBrlRate();
+                                price *= usdBrl;
+                            }
+                            const now = Date.now();
+                            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                                now - (365 - i) * 86400000,
+                                price * (0.9 + Math.random() * 0.2)
+                            ]);
+                            simulatedPrices[364] = [now, price];
+                            return {
+                                price,
+                                sma: sma200(simulatedPrices),
+                                rawPrices: simulatedPrices,
+                                ath: price * 1.05,
+                                athDateRaw: null,
+                                athDate: 'N/A',
+                                change24h,
+                                simulated: true,
+                                source: 'Gate.io'
+                            };
+                        }
+                    }
+                } catch (e) {}
+
+                const res = await fetchWithTimeout('https://api-pub.bitfinex.com/v2/ticker/tXAUT:USD', {}, 4000);
+                if (!res.ok) throw new Error(`Bitfinex Status ${res.status}`);
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length < 7) throw new Error('Bitfinex resposta inválida');
+                let price = data[6];
+                let change24h = (data[5] || 0) * 100;
+                if (vsCurrency === 'brl') {
+                    const usdBrl = await fetchUsdBrlRate();
+                    price *= usdBrl;
+                }
+                const now = Date.now();
+                const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                    now - (365 - i) * 86400000,
+                    price * (0.9 + Math.random() * 0.2)
+                ]);
+                simulatedPrices[364] = [now, price];
+                return {
+                    price,
+                    sma: sma200(simulatedPrices),
+                    rawPrices: simulatedPrices,
+                    ath: price * 1.05,
+                    athDateRaw: null,
+                    athDate: 'N/A',
+                    change24h,
+                    simulated: true,
+                    source: 'Bitfinex'
+                };
+            }
+            throw new Error('Ativo não suportado em corretoras');
+        }
+
+        async function generateEmergencyFallback(symbol, vsCurrency) {
+            const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
+            const basePrice = symbol === 'BTC' ? 95000 : 2720;
+            const price = basePrice * usdRate;
+            const now = Date.now();
+            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                now - (365 - i) * 86400000,
+                price * (0.85 + Math.random() * 0.3)
+            ]);
+            simulatedPrices[364] = [now, price];
+            return {
+                price,
+                sma: sma200(simulatedPrices),
+                rawPrices: simulatedPrices,
+                ath: price * 1.1,
+                athDateRaw: null,
+                athDate: 'N/A',
+                change24h: 0,
+                simulated: true,
+                source: 'Emergência (Simulado)'
+            };
+        }
+
         async function fetchCMCAsset(cmcId, symbol, vsCurrency) {
             const cmcCurrencyId = vsCurrency === 'brl' ? '2783' : '2781';
             const url = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
@@ -852,9 +1066,6 @@
             const change24h = coinData.quote?.[cmcCurrencyId]?.percentChange24h ?? null;
 
             const now = Date.now();
-            // AVISO: CoinMarketCap (via este endpoint gratuito) não fornece série histórica,
-            // então o histórico é simulado apenas para permitir renderizar o gráfico/MM200.
-            // Preço, ATH e variação 24h acima continuam sendo dados reais.
             const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
                 now - (365 - i) * 86400000,
                 currentPrice * (0.85 + Math.random() * 0.3)
@@ -895,9 +1106,6 @@
                     const athVal = row[2] || currentPrice;
                     const now = Date.now();
 
-                    // AVISO: o scanner público do TradingView não fornece série histórica diária,
-                    // então o histórico é simulado apenas para permitir renderizar o gráfico/MM200.
-                    // Preço e variação 24h acima continuam sendo dados reais.
                     const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
                         now - (365 - i) * 86400000,
                         currentPrice * (0.85 + Math.random() * 0.3)
@@ -916,7 +1124,7 @@
                         source: 'TradingView'
                     };
                 } catch (tvErr) {
-                    continue; // tenta o próximo ticker candidato
+                    continue;
                 }
             }
             throw new Error(`TradingView: nenhum ticker disponível para ${symbol}/${vsCurrency}`);
@@ -926,12 +1134,27 @@
             try {
                 return await fetchCoinGeckoAsset(coingeckoId, vsCurrency);
             } catch (cgErr) {
-                console.warn(`[Fallback] CoinGecko falhou para ${symbol}. Alternando para CoinMarketCap...`, cgErr);
+                console.warn(`[Fallback] CoinGecko falhou para ${symbol}. Alternando para CryptoCompare...`, cgErr);
                 try {
-                    return await fetchCMCAsset(cmcId, symbol, vsCurrency);
-                } catch (cmcErr) {
-                    console.warn(`[Fallback] CoinMarketCap falhou para ${symbol}. Alternando para TradingView...`, cmcErr);
-                    return await fetchTradingViewAsset(tvTickers[vsCurrency] || [], symbol, vsCurrency);
+                    return await fetchCryptoCompareAsset(symbol, vsCurrency);
+                } catch (ccErr) {
+                    console.warn(`[Fallback] CryptoCompare falhou para ${symbol}. Alternando para Corretoras...`, ccErr);
+                    try {
+                        return await fetchExchangeAsset(symbol, vsCurrency);
+                    } catch (exErr) {
+                        console.warn(`[Fallback] Corretoras falharam para ${symbol}. Alternando para CoinMarketCap...`, exErr);
+                        try {
+                            return await fetchCMCAsset(cmcId, symbol, vsCurrency);
+                        } catch (cmcErr) {
+                            console.warn(`[Fallback] CoinMarketCap falhou para ${symbol}. Alternando para TradingView...`, cmcErr);
+                            try {
+                                return await fetchTradingViewAsset(tvTickers[vsCurrency] || [], symbol, vsCurrency);
+                            } catch (tvErr) {
+                                console.warn(`[Fallback] Todas as fontes externas falharam para ${symbol}. Usando estimativa de emergência.`, tvErr);
+                                return await generateEmergencyFallback(symbol, vsCurrency);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -965,29 +1188,24 @@
             }
         }
 
-        // Contador de geração: cada chamada a loadTrackerData recebe um número.
-        // Se uma chamada mais nova começar antes de uma antiga terminar, a antiga é descartada
-        // ao concluir — evita misturar dados de USD com BRL quando o usuário troca de moeda rápido.
         let fetchGeneration = 0;
 
         async function loadTrackerData() {
             const myGen = ++fetchGeneration;
-            const requestCurrency = selectedCurrency; // trava a moeda usada durante toda esta busca
+            const requestCurrency = selectedCurrency;
 
             const statusEl = document.getElementById('status');
             const lastFetchText = document.getElementById('lastFetchText');
 
-            statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+            statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500';
             lastFetchText.textContent = 'Consultando fontes de mercado...';
 
-            // BTC e XAUT são buscados em paralelo (antes era sequencial: BTC terminava
-            // por completo para só então começar a busca do XAUT, dobrando o tempo de espera).
             const [btcResult, xautResult] = await Promise.allSettled([
                 getAssetData('bitcoin', '1', TV_TICKERS.BTC, 'BTC', requestCurrency),
                 getAssetData('tether-gold', '4705', TV_TICKERS.XAUT, 'XAUT', requestCurrency)
             ]);
 
-            if (myGen !== fetchGeneration) return; // uma busca mais nova já assumiu, descarta esta
+            if (myGen !== fetchGeneration) return;
 
             const errors = [];
             const simulatedAssets = [];
@@ -1013,7 +1231,9 @@
             }
 
             updateHalvingCountdown();
-            renderChart();
+            if (activePage === 'comparativo') {
+                renderChart();
+            }
 
             const warningEl = document.getElementById('simulatedWarning');
             if (simulatedAssets.length > 0) {
@@ -1027,7 +1247,7 @@
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-up';
                 lastFetchText.textContent = 'Erro ao consultar todas as fontes. Tentando novamente em breve...';
             } else {
-                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
+                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500';
                 const now = new Date();
                 const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 lastFetchText.textContent = errors.length
@@ -1047,7 +1267,7 @@
             setInterval(updateHalvingCountdown, 60 * 1000);
 
             loadTrackerData();
-            setInterval(loadTrackerData, 60 * 1000); // atualiza cotações a cada 1 minuto
+            setInterval(loadTrackerData, 60 * 1000);
         });
     </script>
 </body>
