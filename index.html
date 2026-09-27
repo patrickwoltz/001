@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BTC/XAUt Tracking — Mayer Multiple</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0c11;
+    --bg-raised:#0e1117;
+    --line:#22262f;
+    --line-soft:#181b22;
+    --text:#eef0f2;
+    --muted:#8890a0;
+    --muted-dim:#5c6270;
+    --btc:#e08a3e;
+    --xaut:#c9a536;
+    --up:#c15c52;
+    --ok:#5fa87f;
+    --down:#5b93b8;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--xaut);color:#0a0c11;}
+
+  .wrap{max-width:680px;margin:0 auto;padding:56px 22px 72px;}
+
+  /* Masthead */
+  .masthead{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:36px;}
+  .masthead-top{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;}
+  h1{
+    font-family:Fraunces,Georgia,serif;font-weight:500;
+    font-size:clamp(24px,4.6vw,32px);letter-spacing:.01em;margin:0;
+  }
+  .status{
+    font-size:12px;color:var(--muted-dim);display:flex;align-items:center;gap:7px;
+    white-space:nowrap;flex-shrink:0;
+  }
+  .status .led{width:6px;height:6px;border-radius:50%;background:var(--muted-dim);}
+  .status.live .led{background:var(--ok);animation:pulse 2.4s ease-in-out infinite;}
+  .status.err .led{background:var(--up);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  @media (prefers-reduced-motion:reduce){.status.live .led{animation:none;}}
+
+  .lede{
+    font-family:Fraunces,Georgia,serif;font-style:italic;font-weight:400;
+    color:var(--muted);font-size:15px;margin:10px 0 0;
+  }
+  .sub{color:var(--muted-dim);font-size:13.5px;line-height:1.6;max-width:52ch;margin:12px auto 0;text-align:center;}
+
+  /* Hero scale */
+  .hero{margin-bottom:44px;}
+  .hero-label{
+    font-size:12px;color:var(--muted-dim);margin-bottom:26px;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .hero-label b{color:var(--muted);font-weight:500;}
+
+  .scale{position:relative;height:74px;margin:0 4px;}
+  .track{
+    position:absolute;top:32px;left:0;right:0;height:3px;border-radius:2px;
+    background:linear-gradient(90deg,var(--down),var(--ok) 32%,var(--ok) 58%,var(--up));
+    opacity:.85;
+  }
+  .ref{position:absolute;top:22px;width:1px;height:20px;background:var(--line);}
+  .ref span{
+    position:absolute;top:26px;transform:translateX(-50%);
+    font-size:10.5px;color:var(--muted-dim);white-space:nowrap;
+  }
+  .scale-ends{
+    position:absolute;top:32px;width:100%;display:flex;justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);
+  }
+  .scale-ends span:first-child{transform:translate(-2px,-22px);}
+  .scale-ends span:last-child{transform:translate(2px,-22px);}
+
+  .marker{position:absolute;top:12px;transform:translateX(-50%);text-align:center;transition:left .8s cubic-bezier(.2,.8,.2,1);}
+  .marker .pin{width:13px;height:13px;border-radius:50%;border:3px solid var(--bg);margin:0 auto 6px;box-shadow:0 0 0 1px var(--line-soft);}
+  .marker .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.02em;}
+  .marker.btc .pin{background:var(--btc);} .marker.xaut .pin{background:var(--xaut);}
+
+  /* Ticker rows */
+  .ticker{border-top:1px solid var(--line);}
+  .row{
+    display:grid;grid-template-columns:1fr auto auto auto;gap:18px;align-items:center;
+    padding:20px 0;border-bottom:1px solid var(--line);
+  }
+  .row-id{display:flex;align-items:center;gap:10px;min-width:0;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .btc-dot{background:var(--btc);} .xaut-dot{background:var(--xaut);}
+  .row-name{font-size:14.5px;}
+  .row-name .full{color:var(--muted-dim);font-size:12.5px;display:block;margin-top:1px;}
+
+  .row-figures{text-align:right;}
+  .row-figures .lbl{font-size:10.5px;color:var(--muted-dim);margin-bottom:3px;}
+  .row-figures .val{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);}
+
+  .row-mm{text-align:right;}
+  .row-mm .mm{font-family:Fraunces,Georgia,serif;font-size:26px;line-height:1;}
+  .row-mm .lbl{font-size:10.5px;color:var(--muted-dim);margin-top:3px;}
+
+  .zone{
+    font-size:11.5px;padding:5px 11px;border-radius:2px;white-space:nowrap;
+    font-family:Inter,sans-serif;justify-self:end;
+  }
+  .z-down{background:rgba(91,147,184,.12);color:var(--down);}
+  .z-ok{background:rgba(95,168,127,.12);color:var(--ok);}
+  .z-up{background:rgba(193,92,82,.12);color:var(--up);}
+
+  @media (max-width:560px){
+    .row{grid-template-columns:1fr auto;row-gap:12px;}
+    .row-figures{grid-column:1/2;text-align:left;display:flex;gap:16px;}
+    .row-mm{grid-column:2/3;grid-row:1/2;}
+    .zone{grid-column:1/3;justify-self:start;}
+  }
+
+  button{
+    margin-top:28px;background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:10px 18px;border-radius:2px;font-size:13px;cursor:pointer;
+    font-family:Inter,sans-serif;letter-spacing:.01em;transition:border-color .15s,color .15s;
+  }
+  button:hover{border-color:var(--muted-dim);color:var(--text);}
+  button:focus-visible{outline:2px solid var(--xaut);outline-offset:2px;}
+
+  .note{
+    margin-top:44px;padding:18px 20px;border-left:2px solid var(--line);
+    font-size:13px;color:var(--muted-dim);line-height:1.65;
+  }
+  .note strong{color:var(--muted);font-weight:500;}
+  .note code{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--bg-raised);
+    padding:1px 5px;border-radius:2px;
+  }
+
+  footer{margin-top:26px;font-size:11.5px;color:var(--muted-dim);border-top:1px solid var(--line);padding-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="masthead-top">
+      <h1>BTC/XAUt Tracking</h1>
+      <div class="status" id="status"><span class="led"></span><span id="statusText">Carregando dados</span></div>
+    </div>
+    <p class="sub">Bitcoin e ouro tokenizado, na mesma régua: quantas vezes cada um está acima da própria média de 200 dias, agora.</p>
+  </div>
+
+  <div class="hero">
+    <div class="hero-label"><span>Mayer Multiple</span></div>
+    <div class="scale" id="scale">
+      <div class="track"></div>
+      <div class="scale-ends"><span>0.6x</span><span>2.6x</span></div>
+      <div class="ref" id="ref1"><span>1.0x média</span></div>
+      <div class="ref" id="ref24"><span>2.4x esticado</span></div>
+      <div class="marker btc" id="markBtc"><div class="pin"></div><div class="lbl">BTC</div></div>
+      <div class="marker xaut" id="markXaut"><div class="pin"></div><div class="lbl">XAUT</div></div>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <div class="row">
+      <div class="row-id"><span class="dot btc-dot"></span><span class="row-name">Bitcoin<span class="full">BTC</span></span></div>
+      <div class="row-figures">
+        <div class="lbl">preço</div><div class="val" id="btcPriceOut">—</div>
+      </div>
+      <div class="row-mm"><div class="mm" id="btcMM">—</div><div class="lbl">múltiplo</div></div>
+      <div class="zone" id="btcZone"></div>
+    </div>
+    <div class="row">
+      <div class="row-id"><span class="dot xaut-dot"></span><span class="row-name">Tether Gold<span class="full">XAUT</span></span></div>
+      <div class="row-figures">
+        <div class="lbl">preço</div><div class="val" id="xautPriceOut">—</div>
+      </div>
+      <div class="row-mm"><div class="mm" id="xautMM">—</div><div class="lbl">múltiplo</div></div>
+      <div class="zone" id="xautZone"></div>
+    </div>
+  </div>
+
+  <button id="refreshBtn">Atualizar agora</button>
+
+  <div class="note">
+    <strong>Como isto funciona:</strong> esta página busca preços e histórico de 200 dias diretamente
+    da API pública do CoinGecko (<code>api.coingecko.com</code>) usando o navegador. Isso só funciona
+    quando o arquivo é aberto fora do sandbox do claude.ai — por exemplo, abrindo o arquivo
+    <code>.html</code> localmente no navegador, ou hospedando-o (GitHub Pages, Netlify, Vercel etc.).
+    Dentro do claude.ai o navegador do artefato bloqueia chamadas de rede a domínios externos por
+    segurança, então, se você estiver vendo esta página aqui no chat, o carregamento vai falhar —
+    baixe o arquivo e abra-o normalmente para ver os dados ao vivo.
+  </div>
+  <footer>Mayer Multiple = preço atual ÷ média móvel simples de 200 dias · dados via API pública da CoinGecko</footer>
+</div>
+
+<script>
+const MIN=0.6, MAX=2.6;
+const fmt = n => '$' + n.toLocaleString('en-US', {maximumFractionDigits: n < 10 ? 4 : 2});
+
+function zoneFor(v){
+  if(v < 1) return {cls:'z-down', label:'Abaixo da média'};
+  if(v <= 2.4) return {cls:'z-ok', label:'Faixa normal'};
+  return {cls:'z-up', label:'Esticado'};
+}
+function pct(v){ const c = Math.min(MAX, Math.max(MIN, v)); return ((c-MIN)/(MAX-MIN))*100; }
+
+function sma200(prices){
+  const closes = prices.map(p => p[1]).slice(-200);
+  return closes.reduce((a,b)=>a+b,0) / closes.length;
+}
+
+async function fetchAsset(id){
+  const chartRes = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`);
+  if(!chartRes.ok) throw new Error('market_chart ' + chartRes.status);
+  const chart = await chartRes.json();
+  const price = chart.prices[chart.prices.length - 1][1];
+  const sma = sma200(chart.prices);
+  return {price, sma};
+}
+
+function paint(prefix, price, sma){
+  const mm = price / sma;
+  document.getElementById(prefix+'PriceOut').textContent = fmt(price);
+  document.getElementById(prefix+'MM').textContent = mm.toFixed(2) + 'x';
+  const z = zoneFor(mm);
+  const zEl = document.getElementById(prefix+'Zone');
+  zEl.textContent = z.label; zEl.className = 'zone ' + z.cls;
+  document.getElementById('mark' + prefix[0].toUpperCase() + prefix.slice(1)).style.left = pct(mm) + '%';
+}
+
+async function load(){
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  statusEl.className = 'status';
+  statusText.textContent = 'Carregando dados';
+  try{
+    const [btc, xaut] = await Promise.all([fetchAsset('bitcoin'), fetchAsset('tether-gold')]);
+    paint('btc', btc.price, btc.sma);
+    paint('xaut', xaut.price, xaut.sma);
+    document.getElementById('ref1').style.left = pct(1) + '%';
+    document.getElementById('ref24').style.left = pct(2.4) + '%';
+    statusEl.className = 'status live';
+    statusText.textContent = 'Atualizado em ' + new Date().toLocaleTimeString('pt-BR');
+  }catch(err){
+    statusEl.className = 'status err';
+    statusText.textContent = 'Falha ao buscar dados. Detalhe: ' + err.message;
+  }
+}
+document.getElementById('refreshBtn').addEventListener('click', load);
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
