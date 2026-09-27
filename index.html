@@ -1131,7 +1131,16 @@
             setInterval(updateHalvingCountdown, 60 * 1000);
 
             loadTrackerData();
-            setInterval(loadTrackerData, 60 * 1000);
+
+            // Recarrega a página a cada 1 minuto piscando a tela
+            setInterval(() => {
+                document.body.style.transition = 'opacity 0.2s linear';
+                document.body.style.opacity = '0';
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 200);
+            }, 60 * 1000);
         });
     </script>
 </body>
