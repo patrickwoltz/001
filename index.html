@@ -59,35 +59,6 @@
 
   .sub{color:var(--muted-dim);font-size:13.5px;line-height:1.6;max-width:52ch;margin:12px auto 0;text-align:center;}
 
-  /* Hero scale */
-  .hero{margin-bottom:44px;}
-  .hero-label{
-    font-size:12px;color:var(--muted-dim);margin-bottom:26px;
-    display:flex;justify-content:space-between;align-items:baseline;
-  }
-  .scale{position:relative;height:74px;margin:0 4px;}
-  .track{
-    position:absolute;top:32px;left:0;right:0;height:3px;border-radius:2px;
-    background:linear-gradient(90deg,var(--down),var(--ok) 32%,var(--ok) 58%,var(--up));
-    opacity:.85;
-  }
-  .ref{position:absolute;top:22px;width:1px;height:20px;background:var(--line);}
-  .ref span{
-    position:absolute;top:26px;transform:translateX(-50%);
-    font-size:10.5px;color:var(--muted-dim);white-space:nowrap;
-  }
-  .scale-ends{
-    position:absolute;top:32px;width:100%;display:flex;justify-content:space-between;
-    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);
-  }
-  .scale-ends span:first-child{transform:translate(-2px,-22px);}
-  .scale-ends span:last-child{transform:translate(2px,-22px);}
-
-  .marker{position:absolute;top:12px;transform:translateX(-50%);text-align:center;transition:left .8s cubic-bezier(.2,.8,.2,1);}
-  .marker .pin{width:13px;height:13px;border-radius:50%;border:3px solid var(--bg);margin:0 auto 6px;box-shadow:0 0 0 1px var(--line-soft);}
-  .marker .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.02em;}
-  .marker.btc .pin{background:var(--btc);} .marker.xaut .pin{background:var(--xaut);}
-
   /* Ticker rows */
   .ticker{border-top:1px solid var(--line);}
   .row{
@@ -158,18 +129,6 @@
     <div class="last-fetch" id="lastFetchText">Carregando dados...</div>
   </div>
 
-  <div class="hero">
-    <div class="hero-label"><span>Mayer Multiple</span></div>
-    <div class="scale" id="scale">
-      <div class="track"></div>
-      <div class="scale-ends"><span>0.6x</span><span>2.6x</span></div>
-      <div class="ref" id="ref1"><span>1.0x média</span></div>
-      <div class="ref" id="ref24"><span>2.4x esticado</span></div>
-      <div class="marker btc" id="markBtc"><div class="pin"></div><div class="lbl">BTC</div></div>
-      <div class="marker xaut" id="markXaut"><div class="pin"></div><div class="lbl">XAUT</div></div>
-    </div>
-  </div>
-
   <div class="ticker">
     <div class="row">
       <div class="row-id"><span class="dot btc-dot"></span><span class="row-name">Bitcoin<span class="full">BTC</span></span></div>
@@ -199,7 +158,6 @@
 </div>
 
 <script>
-const MIN = 0.6, MAX = 2.6;
 const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2});
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -218,11 +176,6 @@ function zoneFor(v){
   if(v < 1) return {cls:'z-down', label:'Abaixo da média'};
   if(v <= 2.4) return {cls:'z-ok', label:'Faixa normal'};
   return {cls:'z-up', label:'Esticado'};
-}
-
-function pct(v){ 
-  const c = Math.min(MAX, Math.max(MIN, v)); 
-  return ((c - MIN) / (MAX - MIN)) * 100; 
 }
 
 function sma200(prices){
@@ -252,7 +205,6 @@ function paint(prefix, price, sma){
   const zEl = document.getElementById(prefix + 'Zone');
   zEl.textContent = z.label; 
   zEl.className = 'zone ' + z.cls;
-  document.getElementById('mark' + prefix[0].toUpperCase() + prefix.slice(1)).style.left = pct(mm) + '%';
 }
 
 async function load(){
@@ -262,9 +214,6 @@ async function load(){
   lastFetchText.textContent = 'Buscando cotações atualizadas...';
   
   try {
-    document.getElementById('ref1').style.left = pct(1.0) + '%';
-    document.getElementById('ref24').style.left = pct(2.4) + '%';
-
     const btc = await fetchAsset('bitcoin');
     await delay(300);
     const xaut = await fetchAsset('tether-gold');
