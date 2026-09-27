@@ -3,289 +3,355 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BTC/XAUt Tracking — Mayer Multiple</title>
+<title>Acompanhamento de Criptomoedas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0a0c11;
-    --bg-raised:#0e1117;
-    --line:#22262f;
-    --line-soft:#181b22;
-    --text:#eef0f2;
-    --muted:#8890a0;
-    --muted-dim:#5c6270;
-    --btc:#e08a3e;
-    --xaut:#c9a536;
-    --up:#c15c52;
-    --ok:#5fa87f;
-    --down:#5b93b8;
+  :root {
+    --bg: #f8f6f0;
+    --card-bg: #ffffff;
+    --line: #e8e4dc;
+    --text: #1a1a1a;
+    --muted: #8c857b;
+    --muted-light: #b5afa6;
+    --up: #10b981;
+    --down: #ef4444;
+    --blue: #2563eb;
+    --box-bg: #f3efe6;
   }
-  *{box-sizing:border-box;}
-  html{-webkit-tap-highlight-color:transparent;}
-  body{
-    margin:0;background:var(--bg);color:var(--text);
-    font-family:Inter,system-ui,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  ::selection{background:var(--xaut);color:#0a0c11;}
-
-  .wrap{max-width:680px;margin:0 auto;padding:56px 22px 72px;}
-
-  /* Masthead */
-  .masthead{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:36px;}
-  .masthead-top{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;}
-  h1{
-    font-family:Fraunces,Georgia,serif;font-weight:500;
-    font-size:clamp(24px,4.6vw,32px);letter-spacing:.01em;margin:0;
-  }
-  .status{
-    font-size:12px;color:var(--muted-dim);display:flex;align-items:center;gap:7px;
-    white-space:nowrap;flex-shrink:0;
-    font-family:'IBM Plex Mono',monospace;
-  }
-  .status .led{width:6px;height:6px;border-radius:50%;background:var(--muted-dim);}
-  /* Bolinha alterada para a cor laranja (--btc) */
-  .status.live .led{background:var(--btc);animation:pulse 2.4s ease-in-out infinite;}
-  .status.err .led{background:var(--up);}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-  @media (prefers-reduced-motion:reduce){.status.live .led{animation:none;}}
-
-  .last-fetch{
-    font-size:11px;color:var(--muted-dim);margin-top:6px;text-align:center;
-    font-family:'IBM Plex Mono',monospace;
+  
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 20px;
   }
 
-  .sub{color:var(--muted-dim);font-size:13.5px;line-height:1.6;max-width:52ch;margin:12px auto 0;text-align:center;}
-
-  /* Hero scale */
-  .hero{margin-bottom:44px;}
-  .hero-label{
-    font-size:12px;color:var(--muted-dim);margin-bottom:26px;
-    display:flex;justify-content:space-between;align-items:baseline;
-  }
-  .scale{position:relative;height:74px;margin:0 4px;}
-  .track{
-    position:absolute;top:32px;left:0;right:0;height:3px;border-radius:2px;
-    background:linear-gradient(90deg,var(--down),var(--ok) 32%,var(--ok) 58%,var(--up));
-    opacity:.85;
-  }
-  .ref{position:absolute;top:22px;width:1px;height:20px;background:var(--line);}
-  .ref span{
-    position:absolute;top:26px;transform:translateX(-50%);
-    font-size:10.5px;color:var(--muted-dim);white-space:nowrap;
-  }
-  .scale-ends{
-    position:absolute;top:32px;width:100%;display:flex;justify-content:space-between;
-    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-dim);
-  }
-  .scale-ends span:first-child{transform:translate(-2px,-22px);}
-  .scale-ends span:last-child{transform:translate(2px,-22px);}
-
-  .marker{position:absolute;top:12px;transform:translateX(-50%);text-align:center;transition:left .8s cubic-bezier(.2,.8,.2,1);}
-  .marker .pin{width:13px;height:13px;border-radius:50%;border:3px solid var(--bg);margin:0 auto 6px;box-shadow:0 0 0 1px var(--line-soft);}
-  .marker .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.02em;}
-  .marker.btc .pin{background:var(--btc);} .marker.xaut .pin{background:var(--xaut);}
-
-  /* Ticker rows */
-  .ticker{border-top:1px solid var(--line);}
-  .row{
-    display:grid;grid-template-columns:1fr auto auto auto;gap:18px;align-items:center;
-    padding:20px 0;border-bottom:1px solid var(--line);
-  }
-  .row-id{display:flex;align-items:center;gap:10px;min-width:0;}
-  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-  .btc-dot{background:var(--btc);} .xaut-dot{background:var(--xaut);}
-  .row-name{font-size:14.5px;}
-  .row-name .full{color:var(--muted-dim);font-size:12.5px;display:block;margin-top:1px;}
-
-  .row-figures{text-align:right;}
-  .row-figures .lbl{font-size:10.5px;color:var(--muted-dim);margin-bottom:3px;}
-  .row-figures .val{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);}
-
-  .row-mm{text-align:right;}
-  .row-mm .mm{font-family:Fraunces,Georgia,serif;font-size:26px;line-height:1;}
-  .row-mm .lbl{font-size:10.5px;color:var(--muted-dim);margin-top:3px;}
-
-  .zone{
-    font-size:11.5px;padding:5px 11px;border-radius:2px;white-space:nowrap;
-    font-family:Inter,sans-serif;justify-self:end;
-  }
-  .z-down{background:rgba(91,147,184,.12);color:var(--down);}
-  .z-ok{background:rgba(95,168,127,.12);color:var(--ok);}
-  .z-up{background:rgba(193,92,82,.12);color:var(--up);}
-
-  @media (max-width:560px){
-    .row{grid-template-columns:1fr auto;row-gap:12px;}
-    .row-figures{grid-column:1/2;text-align:left;display:flex;gap:16px;}
-    .row-mm{grid-column:2/3;grid-row:1/2;}
-    .zone{grid-column:1/3;justify-self:start;}
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
   }
 
-  button{
-    margin-top:28px;background:transparent;border:1px solid var(--line);color:var(--muted);
-    padding:10px 18px;border-radius:2px;font-size:13px;cursor:pointer;
-    font-family:Inter,sans-serif;letter-spacing:.01em;transition:border-color .15s,color .15s;
-  }
-  button:hover{border-color:var(--muted-dim);color:var(--text);}
-  button:focus-visible{outline:2px solid var(--xaut);outline-offset:2px;}
-
-  .note{
-    margin-top:44px;padding:18px 20px;border-left:2px solid var(--line);
-    font-size:13px;color:var(--muted-dim);line-height:1.65;
-  }
-  .note strong{color:var(--muted);font-weight:500;}
-  .note code{
-    font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--bg-raised);
-    padding:1px 5px;border-radius:2px;
+  /* Header e Relógio */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
   }
 
-  footer{margin-top:26px;font-size:11.5px;color:var(--muted-dim);border-top:1px solid var(--line);padding-top:18px;}
+  .status-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .status .led {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted-light);
+  }
+
+  .status.live .led {
+    background: #f97316; /* Bolinha Laranja */
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .35; }
+  }
+
+  .last-fetch {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Tabela de Ativos */
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted-light);
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+
+  tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .col-num {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted-light);
+    font-size: 13px;
+    width: 40px;
+  }
+
+  .asset-cell {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .symbol-box {
+    width: 42px;
+    height: 42px;
+    background: var(--box-bg);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    border-radius: 2px;
+  }
+
+  .asset-info .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    display: block;
+  }
+
+  .asset-info .ticker {
+    font-size: 12px;
+    color: var(--muted-light);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .price {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .change {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .change.up { color: var(--up); }
+  .change.down { color: var(--down); }
+
+  .market-cap {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Botão Trocar */
+  .btn-swap {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 8px 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-swap:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+
+  .btn-swap.primary {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #ffffff;
+  }
+
+  .btn-swap.primary:hover {
+    background: #1d4ed8;
+  }
+
+  .actions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .btn-refresh {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 10px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  .btn-refresh:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="masthead">
-    <div class="masthead-top">
-      <h1>BTC/XAUt Tracking</h1>
-      <div class="status" id="status">
+<div class="container">
+  <div class="header">
+    <div class="status-group">
+      <div class="status live" id="status">
         <span class="led"></span>
         <span id="clockDisplay">00:00:00</span>
       </div>
     </div>
-    <div class="last-fetch" id="lastFetchText">Carregando dados...</div>
+    <div class="last-fetch" id="lastFetchText">Carregando cotações...</div>
   </div>
 
-  <div class="hero">
-    <div class="hero-label"><span>Mayer Multiple</span></div>
-    <div class="scale" id="scale">
-      <div class="track"></div>
-      <div class="scale-ends"><span>0.6x</span><span>2.6x</span></div>
-      <div class="ref" id="ref1"><span>1.0x média</span></div>
-      <div class="ref" id="ref24"><span>2.4x esticado</span></div>
-      <div class="marker btc" id="markBtc"><div class="pin"></div><div class="lbl">BTC</div></div>
-      <div class="marker xaut" id="markXaut"><div class="pin"></div><div class="lbl">XAUT</div></div>
-    </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Ativo</th>
+          <th>Preço</th>
+          <th>24H</th>
+          <th>Cap. Mercado</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="cryptoTable">
+        <!-- Linhas dinâmicas -->
+      </tbody>
+    </table>
   </div>
 
-  <div class="ticker">
-    <div class="row">
-      <div class="row-id"><span class="dot btc-dot"></span><span class="row-name">Bitcoin<span class="full">BTC</span></span></div>
-      <div class="row-figures">
-        <div class="lbl">preço</div><div class="val" id="btcPriceOut">—</div>
-      </div>
-      <div class="row-mm"><div class="mm" id="btcMM">—</div><div class="lbl">múltiplo</div></div>
-      <div class="zone" id="btcZone"></div>
-    </div>
-    <div class="row">
-      <div class="row-id"><span class="dot xaut-dot"></span><span class="row-name">Tether Gold<span class="full">XAUT</span></span></div>
-      <div class="row-figures">
-        <div class="lbl">preço</div><div class="val" id="xautPriceOut">—</div>
-      </div>
-      <div class="row-mm"><div class="mm" id="xautMM">—</div><div class="lbl">múltiplo</div></div>
-      <div class="zone" id="xautZone"></div>
-    </div>
+  <div class="actions">
+    <button class="btn-refresh" id="refreshBtn">Atualizar agora</button>
   </div>
-
-  <button id="refreshBtn">Atualizar agora</button>
-
-  <div class="note">
-    <strong>Como isto funciona:</strong> esta página busca preços e histórico de 200 dias diretamente
-    da API pública da CoinGecko (<code>api.coingecko.com</code>).
-  </div>
-  <footer>Mayer Multiple = preço atual ÷ média móvel simples de 200 dias · dados via API pública da CoinGecko</footer>
 </div>
 
 <script>
-const MIN = 0.6, MAX = 2.6;
-const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2});
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const ASSETS = [
+  { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', num: '01', isPrimary: true },
+  { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', num: '02' },
+  { id: 'solana', symbol: 'SOL', name: 'Solana', num: '03' },
+  { id: 'binancecoin', symbol: 'BNB', name: 'BNB', num: '04' },
+  { id: 'ripple', symbol: 'XRP', name: 'XRP', num: '05' }
+];
 
-// --- Relógio em tempo real ---
+const fmtBRL = n => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function formatCap(n) {
+  if (n >= 1e12) return 'R$ ' + (n / 1e12).toFixed(1).replace('.', ',') + ' tri';
+  if (n >= 1e9) return 'R$ ' + (n / 1e9).toFixed(1).replace('.', ',') + ' bi';
+  return 'R$ ' + (n / 1e6).toFixed(1).replace('.', ',') + ' mi';
+}
+
 function startClock() {
   const clockEl = document.getElementById('clockDisplay');
   function update() {
-    const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString('pt-BR');
+    clockEl.textContent = new Date().toLocaleTimeString('pt-BR');
   }
   update();
   setInterval(update, 1000);
 }
 
-function zoneFor(v){
-  if(v < 1) return {cls:'z-down', label:'Abaixo da média'};
-  if(v <= 2.4) return {cls:'z-ok', label:'Faixa normal'};
-  return {cls:'z-up', label:'Esticado'};
-}
-
-function pct(v){ 
-  const c = Math.min(MAX, Math.max(MIN, v)); 
-  return ((c - MIN) / (MAX - MIN)) * 100; 
-}
-
-function sma200(prices){
-  if(!prices || prices.length === 0) return 0;
-  const closes = prices.map(p => p[1]).slice(-200);
-  return closes.reduce((a, b) => a + b, 0) / closes.length;
-}
-
-async function fetchAsset(id){
-  const chartRes = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`);
-  if(!chartRes.ok) {
-    if(chartRes.status === 429) throw new Error('Limite de requisições atingido (429). Aguarde alguns segundos.');
-    throw new Error('Erro na requisição: ' + chartRes.status);
-  }
-  const chart = await chartRes.json();
-  if(!chart.prices || chart.prices.length === 0) throw new Error('Dados indisponíveis para ' + id);
-  const price = chart.prices[chart.prices.length - 1][1];
-  const sma = sma200(chart.prices);
-  return {price, sma};
-}
-
-function paint(prefix, price, sma){
-  const mm = price / sma;
-  document.getElementById(prefix + 'PriceOut').textContent = fmt(price);
-  document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
-  const z = zoneFor(mm);
-  const zEl = document.getElementById(prefix + 'Zone');
-  zEl.textContent = z.label; 
-  zEl.className = 'zone ' + z.cls;
-  document.getElementById('mark' + prefix[0].toUpperCase() + prefix.slice(1)).style.left = pct(mm) + '%';
-}
-
-async function load(){
-  const statusEl = document.getElementById('status');
+async function loadData() {
   const lastFetchText = document.getElementById('lastFetchText');
-  
-  lastFetchText.textContent = 'Buscando cotações atualizadas...';
-  
+  lastFetchText.textContent = 'Buscando cotações...';
+
   try {
-    document.getElementById('ref1').style.left = pct(1.0) + '%';
-    document.getElementById('ref24').style.left = pct(2.4) + '%';
+    const ids = ASSETS.map(a => a.id).join(',');
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=brl&include_24hr_change=true&include_market_cap=true`);
+    
+    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
+    const data = await res.json();
 
-    const btc = await fetchAsset('bitcoin');
-    await delay(300);
-    const xaut = await fetchAsset('tether-gold');
+    const tbody = document.getElementById('cryptoTable');
+    tbody.innerHTML = '';
 
-    paint('btc', btc.price, btc.sma);
-    paint('xaut', xaut.price, xaut.sma);
+    ASSETS.forEach(asset => {
+      const info = data[asset.id];
+      if (!info) return;
 
-    statusEl.className = 'status live';
-    // Formatação do texto alterada conforme solicitado
+      const price = info.brl;
+      const change = info.brl_24h_change;
+      const mcap = info.brl_market_cap;
+
+      const isUp = change >= 0;
+      const changeClass = isUp ? 'up' : 'down';
+      const changeSign = isUp ? '+' : '';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="col-num">${asset.num}</td>
+        <td>
+          <div class="asset-cell">
+            <div class="symbol-box">${asset.symbol}</div>
+            <div class="asset-info">
+              <span class="name">${asset.name}</span>
+              <span class="ticker">${asset.symbol}</span>
+            </div>
+          </div>
+        </td>
+        <td class="price">${fmtBRL(price)}</td>
+        <td class="change ${changeClass}">${changeSign}${change.toFixed(2)}%</td>
+        <td class="market-cap">${formatCap(mcap)}</td>
+        <td>
+          <button class="btn-swap ${asset.isPrimary ? 'primary' : ''}">Trocar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
     lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
-  } catch(err) {
-    statusEl.className = 'status err';
-    lastFetchText.textContent = 'Falha: ' + err.message;
+  } catch (err) {
+    lastFetchText.textContent = 'Falha ao carregar dados: ' + err.message;
   }
 }
 
-// Inicialização
 startClock();
-document.getElementById('refreshBtn').addEventListener('click', load);
-load();
-setInterval(load, 60000); // Recarrega os dados da API a cada 1 minuto
+loadData();
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+setInterval(loadData, 60000);
 </script>
+
 </body>
 </html>
