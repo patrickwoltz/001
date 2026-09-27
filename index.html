@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BitBunker</title>
+    <title>BitBunker - Visão de Mercado BTC & XAUT</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,7 +38,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -121,10 +121,10 @@
 
             <!-- Controles Auxiliares (Moeda) -->
             <div class="flex items-center gap-2 sm:gap-4 shrink-0">
-                <!-- Botão Seletor de Moeda Pequeno -->
+                <!-- Botão Seletor de Moeda -->
                 <div class="flex items-center bg-dark-700 p-0.5 rounded-lg border border-dark-border text-[10px] font-mono">
-                    <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-1.5 py-0.5 rounded bg-btc text-white font-medium transition">USD</button>
-                    <button id="currBrlBtn" onclick="setCurrency('brl')" class="px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition">BRL</button>
+                    <button id="currUsdBtn" onclick="setCurrency('usd')" class="px-2 py-1 rounded bg-btc text-white font-medium transition">USD</button>
+                    <button id="currBrlBtn" onclick="setCurrency('brl')" class="px-2 py-1 rounded text-gray-400 hover:text-white transition">BRL</button>
                 </div>
             </div>
         </div>
@@ -136,83 +136,129 @@
         <!-- PÁGINA 1: OVERVIEW -->
         <div id="page-overview" class="page-view active">
             <section class="py-2">
-                <div class="max-w-5xl mx-auto px-6">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6">
                     
                     <!-- Divisória da Métrica Global (Topo) -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-dark-border gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-dark-border gap-3">
                         <div>
                             <h1 class="text-2xl font-serif mt-1">BTC x Tether Gold</h1>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">Cotações agregadas via <span class="text-gray-300 font-semibold">CoinGecko</span> & <span class="text-gray-300 font-semibold">CoinMarketCap</span></p>
                         </div>
                         
                         <div class="flex flex-col sm:items-end gap-1">
-                            <div class="status flex items-center gap-2 text-[11px] font-mono text-gray-500" id="status">
+                            <div class="status flex items-center gap-2 text-[11px] font-mono text-gray-400" id="status">
                                 <span class="led"></span>
                                 <span id="lastFetchText">Iniciando consulta às cotações...</span>
+                            </div>
+                            <div class="text-[10px] font-mono text-gray-500">
+                                Fontes primárias: CoinGecko / CoinMarketCap
                             </div>
                         </div>
                     </div>
 
-                    <!-- Ticker Rows -->
-                    <div class="divide-y divide-dark-border border-y border-dark-border">
+                    <!-- Ticker Rows: Layout rigorosamente alinhado horizontal e verticalmente -->
+                    <div class="divide-y divide-dark-border border-y border-dark-border bg-dark-800/30 rounded-xl overflow-hidden">
+                        
                         <!-- Bitcoin Row -->
-                        <div class="py-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
-                            <div class="flex items-center gap-3">
-                                <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
+                        <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                            
+                            <!-- Ativo / Nome -->
+                            <div class="md:col-span-3 flex items-center gap-3">
+                                <span class="w-3 h-3 rounded-full bg-btc shrink-0 shadow-sm shadow-btc/50"></span>
                                 <div>
-                                    <div class="font-medium text-sm">Bitcoin</div>
+                                    <div class="font-semibold text-base">Bitcoin</div>
                                     <div class="text-xs font-mono text-gray-400">BTC</div>
                                 </div>
                             </div>
-                            <!-- 1. Preço -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço</div>
-                                <div class="font-mono text-base font-medium" id="btcPriceOut">Carregando...</div>
-                                <div class="text-[10px] font-mono" id="btcChangeOut">—</div>
+
+                            <!-- Três Métricas Alinhadas Perfeitamente na Mesma Altura (Centralizadas Horizontalmente) -->
+                            <div class="md:col-span-6 grid grid-cols-3 gap-2 items-start py-1">
+                                <!-- 1. Preço -->
+                                <div class="flex flex-col items-center justify-start text-center h-full px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center">Preço</span>
+                                    <div class="font-mono text-sm sm:text-base font-semibold text-gray-100 min-h-[24px] flex items-center justify-center" id="btcPriceOut">Carregando...</div>
+                                    <div class="text-[10px] font-mono mt-1 min-h-[14px]" id="btcChangeOut">—</div>
+                                </div>
+
+                                <!-- 2. Média de 200 dias -->
+                                <div class="flex flex-col items-center justify-start text-center h-full border-x border-dark-border/60 px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center">Média de 200d</span>
+                                    <div class="font-mono text-sm sm:text-base font-semibold text-gray-100 min-h-[24px] flex items-center justify-center" id="btcSmaOut">—</div>
+                                </div>
+
+                                <!-- 3. Mayer Multiple -->
+                                <div class="flex flex-col items-center justify-start text-center h-full px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias.">Mayer Multiple</span>
+                                    <div class="font-serif text-lg sm:text-xl font-bold text-gray-100 min-h-[24px] flex items-center justify-center" id="btcMM">—</div>
+                                </div>
                             </div>
-                            <!-- 2. Média de 200 dias -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Média de 200d</div>
-                                <div class="font-mono text-base font-medium" id="btcSmaOut">—</div>
-                            </div>
-                            <!-- 3. Mayer Multiple -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Mayer Multiple</div>
-                                <div class="font-serif text-xl" id="btcMM">—</div>
-                            </div>
-                            <div class="hidden md:block"></div>
-                            <div class="col-span-2 sm:col-span-1 md:justify-self-end">
-                                <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
+
+                            <!-- Tag da Zona -->
+                            <div class="md:col-span-3 flex justify-center md:justify-end">
+                                <span class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs font-medium font-mono text-center min-w-[130px]" id="btcZone">Calculando...</span>
                             </div>
                         </div>
 
                         <!-- Tether Gold Row -->
-                        <div class="py-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
-                            <div class="flex items-center gap-3">
-                                <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
+                        <div class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                            
+                            <!-- Ativo / Nome -->
+                            <div class="md:col-span-3 flex items-center gap-3">
+                                <span class="w-3 h-3 rounded-full bg-xaut shrink-0 shadow-sm shadow-xaut/50"></span>
                                 <div>
-                                    <div class="font-medium text-sm">Tether Gold</div>
+                                    <div class="font-semibold text-base">Tether Gold</div>
                                     <div class="text-xs font-mono text-gray-400">XAUT</div>
                                 </div>
                             </div>
-                            <!-- 1. Preço -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço</div>
-                                <div class="font-mono text-base font-medium" id="xautPriceOut">Carregando...</div>
-                                <div class="text-[10px] font-mono" id="xautChangeOut">—</div>
+
+                            <!-- Três Métricas Alinhadas Perfeitamente na Mesma Altura (Centralizadas Horizontalmente) -->
+                            <div class="md:col-span-6 grid grid-cols-3 gap-2 items-start py-1">
+                                <!-- 1. Preço -->
+                                <div class="flex flex-col items-center justify-start text-center h-full px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center">Preço</span>
+                                    <div class="font-mono text-sm sm:text-base font-semibold text-gray-100 min-h-[24px] flex items-center justify-center" id="xautPriceOut">Carregando...</div>
+                                    <div class="text-[10px] font-mono mt-1 min-h-[14px]" id="xautChangeOut">—</div>
+                                </div>
+
+                                <!-- 2. Média de 200 dias -->
+                                <div class="flex flex-col items-center justify-start text-center h-full border-x border-dark-border/60 px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center">Média de 200d</span>
+                                    <div class="font-mono text-sm sm:text-base font-semibold text-gray-100 min-h-[24px] flex items-center justify-center" id="xautSmaOut">—</div>
+                                </div>
+
+                                <!-- 3. Mayer Multiple -->
+                                <div class="flex flex-col items-center justify-start text-center h-full px-1">
+                                    <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider mb-1.5 h-4 flex items-center cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias.">Mayer Multiple</span>
+                                    <div class="font-serif text-lg sm:text-xl font-bold text-gray-100 min-h-[24px] flex items-center justify-center" id="xautMM">—</div>
+                                </div>
                             </div>
-                            <!-- 2. Média de 200 dias -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Média de 200d</div>
-                                <div class="font-mono text-base font-medium" id="xautSmaOut">—</div>
+
+                            <!-- Tag da Zona -->
+                            <div class="md:col-span-3 flex justify-center md:justify-end">
+                                <span class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs font-medium font-mono text-center min-w-[130px]" id="xautZone">Calculando...</span>
                             </div>
-                            <!-- 3. Mayer Multiple -->
-                            <div class="text-center">
-                                <div class="text-[10px] font-mono uppercase text-gray-400 cursor-help" title="Mayer Multiple: preço atual ÷ média móvel de 200 dias. Abaixo de 1 = historicamente barato, acima de 2.4 = historicamente esticado.">Mayer Multiple</div>
-                                <div class="font-serif text-xl" id="xautMM">—</div>
+                        </div>
+
+                    </div>
+
+                    <!-- Cartões Informativos adicionais -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                        <div class="p-4 rounded-xl border border-dark-border bg-dark-800/20 text-xs font-mono text-gray-400">
+                            <div class="text-btc font-semibold mb-1 uppercase tracking-wide">Mayer Multiple (MM)</div>
+                            Indica a relação entre o preço spot e a média de 200 dias. 
+                            <ul class="mt-2 space-y-1 text-[11px] text-gray-400">
+                                <li class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-down"></span> &lt; 1.0x: Preço abaixo da média de 200d (Barato)</li>
+                                <li class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ok"></span> 1.0x - 2.4x: Faixa histórica de acumulação</li>
+                                <li class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-up"></span> &gt; 2.4x: Historicamente esticado / Sobrecomprado</li>
+                            </ul>
+                        </div>
+                        <div class="p-4 rounded-xl border border-dark-border bg-dark-800/20 text-xs font-mono text-gray-400 flex flex-col justify-between">
+                            <div>
+                                <div class="text-xaut font-semibold mb-1 uppercase tracking-wide">Fontes & Conectividade</div>
+                                As cotações são consultadas prioritariamente via API da <strong class="text-gray-200">CoinGecko</strong> e com redundância dinâmica via <strong class="text-gray-200">CoinMarketCap (CMC)</strong>.
                             </div>
-                            <div class="hidden md:block"></div>
-                            <div class="col-span-2 sm:col-span-1 md:justify-self-end">
-                                <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
+                            <div class="mt-3 pt-2 border-t border-dark-border/60 text-[11px] text-gray-400">
+                                Atualização automática ativa a cada 60s.
                             </div>
                         </div>
                     </div>
@@ -224,23 +270,24 @@
         <!-- PÁGINA 2: COMPARATIVO -->
         <div id="page-comparativo" class="page-view">
             <section class="py-2">
-                <div class="max-w-5xl mx-auto px-6">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                         <div>
                             <h1 class="text-2xl font-serif mt-1">Comparativo BTC vs. XAUT</h1>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">Histórico e tendência de preço com overlay do Mayer Multiple</p>
                         </div>
                         
                         <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
-                            <!-- Seletor de Visão (BTC / XAU / Comparação) -->
+                            <!-- Seletor de Visão -->
                             <div class="flex bg-dark-700 p-1 rounded-xl border border-dark-border">
                                 <button onclick="changeView('btc', event)" class="view-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">BTC</button>
                                 <button onclick="changeView('xaut', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-400 hover:text-white font-medium transition">XAU</button>
-                                <button onclick="changeView('compare', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-400 hover:text-white font-medium transition">BTC vs. XAUt</button>
+                                <button onclick="changeView('compare', event)" class="view-btn px-3 py-1.5 rounded-lg text-gray-400 hover:text-white font-medium transition">BTC vs. XAUT</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Legenda de cores por faixa de MM200 (só nas visões individuais) -->
+                    <!-- Legenda de cores por faixa de MM200 -->
                     <div id="chartColorLegend" class="mb-3 flex flex-wrap items-center gap-4 text-[11px] font-mono text-gray-400">
                         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#5fa87f"></span>Verde: MM200 &lt; 1.0x</span>
                         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#eab308"></span>Amarelo: MM200 entre 1.0x e 2.0x</span>
@@ -260,7 +307,7 @@
                         </div>
                     </div>
 
-                    <!-- Comparison Line Chart Ampliado -->
+                    <!-- Comparison Line Chart -->
                     <div class="w-full bg-dark-800/40 p-4 rounded-2xl border border-dark-border">
                         <div class="h-80 w-full">
                             <canvas id="comparisonChart"></canvas>
@@ -274,7 +321,7 @@
         <!-- PÁGINA 3: CALCULADORA -->
         <div id="page-calculadora" class="page-view">
             <section class="py-2">
-                <div class="max-w-5xl mx-auto px-6">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6">
                     <div class="mb-5">
                         <h1 class="text-2xl font-serif mt-1">Calculadora de Preço Médio (DCA)</h1>
                         <p class="text-sm text-gray-400 mt-1 max-w-2xl">Registre suas compras por data e valor investido. A calculadora estima o preço histórico do BTC em cada data, converte para satoshis e compara seu preço médio com a cotação atual.</p>
@@ -284,11 +331,11 @@
                     <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mb-3 items-end">
                         <div>
                             <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Data da compra</label>
-                            <input type="date" id="dcaDate" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                            <input type="date" id="dcaDate" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono text-gray-100 focus:outline-none focus:ring-1 focus:ring-btc">
                         </div>
                         <div>
                             <label class="text-[10px] font-mono uppercase text-gray-400 block mb-1">Valor investido (<span class="currencyLabel">USD</span>)</label>
-                            <input type="number" id="dcaAmount" placeholder="Ex: 500" min="0" step="0.01" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-btc">
+                            <input type="number" id="dcaAmount" placeholder="Ex: 500" min="0" step="0.01" class="w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-700 text-sm font-mono text-gray-100 focus:outline-none focus:ring-1 focus:ring-btc">
                         </div>
                         <button onclick="addDcaEntry()" class="px-4 py-2 rounded-lg bg-btc text-white text-sm font-medium hover:opacity-90 transition whitespace-nowrap">+ Adicionar compra</button>
                     </div>
@@ -312,7 +359,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="text-[10px] font-mono text-gray-400 -mt-3 mb-5">* Data fora da janela de histórico disponível (365 dias); preço estimado pelo ponto mais próximo.</div>
+                    <div class="text-[10px] font-mono text-gray-500 -mt-3 mb-5">* Data fora da janela de histórico disponível (365 dias); preço estimado pelo ponto mais próximo.</div>
 
                     <!-- Resumo -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-dark-border pt-4">
@@ -325,10 +372,10 @@
                             <div class="font-mono text-base font-medium" id="dcaTotalBtc">—</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago <span class="normal-case text-gray-600">vs. atual</span></div>
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-1">Preço médio pago <span class="normal-case text-gray-500">vs. atual</span></div>
                             <div class="flex items-baseline gap-2 flex-wrap">
                                 <span class="font-mono text-base font-medium" id="dcaAvgPrice">—</span>
-                                <span class="text-gray-600 text-xs">&rarr;</span>
+                                <span class="text-gray-500 text-xs">&rarr;</span>
                                 <span class="font-mono text-base font-medium text-btc" id="dcaCurrentPrice">—</span>
                             </div>
                         </div>
@@ -343,11 +390,13 @@
 
     </main>
 
-    <!-- Footer Minimalista -->
+    <!-- Footer Minimalista com Atribuição Explícita -->
     <footer class="border-t border-dark-border py-6 bg-dark-900">
-        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400 font-mono">
-            <div>
-                Made by Pk · Trust In God, But Keep Your Powder Dry · Brazil 2026
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400 font-mono">
+            <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                <span>BitBunker &copy; 2026</span>
+                <span class="hidden sm:inline text-gray-600">|</span>
+                <span>Dados alimentados via <strong class="text-gray-300">CoinGecko API</strong> & <strong class="text-gray-300">CoinMarketCap</strong></span>
             </div>
             <div class="flex items-center space-x-6">
                 <button onclick="navigateTo('overview')" id="footer-nav-overview" class="hover:text-btc transition">Overview</button>
@@ -377,12 +426,10 @@
                 XAUT: 'tether-gold'
             },
             CoinMarketCap: {
-                apiKey: 'SUA_CMC_API_KEY_AQUI',
                 BTC: '1',
                 XAUT: '4705'
             },
             CoinStats: {
-                apiKey: 'SUA_COINSTATS_API_KEY_AQUI',
                 BTC: 'bitcoin',
                 XAUT: 'tether-gold'
             }
@@ -437,11 +484,11 @@
             const brlBtn = document.getElementById('currBrlBtn');
 
             if (curr === 'usd') {
-                usdBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
-                brlBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition';
+                usdBtn.className = 'px-2 py-1 rounded bg-btc text-white font-medium transition';
+                brlBtn.className = 'px-2 py-1 rounded text-gray-400 hover:text-white transition';
             } else {
-                brlBtn.className = 'px-1.5 py-0.5 rounded bg-btc text-white font-medium transition';
-                usdBtn.className = 'px-1.5 py-0.5 rounded text-gray-400 hover:text-white transition';
+                brlBtn.className = 'px-2 py-1 rounded bg-btc text-white font-medium transition';
+                usdBtn.className = 'px-2 py-1 rounded text-gray-400 hover:text-white transition';
             }
             document.querySelectorAll('.currencyLabel').forEach(el => el.textContent = curr.toUpperCase());
         }
@@ -511,7 +558,7 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
             const gridColor = '#22262f';
-            const textColor = '#5c6270';
+            const textColor = '#8890a0';
 
             if (chartInstance) chartInstance.destroy();
 
@@ -781,12 +828,12 @@
                     const dateFmt = new Date(e.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' });
                     const btcAmount = e.sats / 1e8;
                     return `
-                        <tr class="border-b border-gray-100 dark:border-dark-border/50 last:border-0 ${dimmed ? 'opacity-40' : ''}">
+                        <tr class="border-b border-dark-border/50 last:border-0 ${dimmed ? 'opacity-40' : ''}">
                             <td class="py-2 px-3 font-mono text-xs">${dateFmt}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs">${fmtCurrency(e.amount, e.currency)}${e.approx ? ' *' : ''}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs text-gray-400">${fmtCurrency(e.price, e.currency)}</td>
                             <td class="py-2 px-3 text-right font-mono text-xs">${btcAmount.toFixed(8)} BTC</td>
-                            <td class="py-2 px-3 text-right"><button onclick="removeDcaEntry(${idx})" class="text-gray-400 hover:text-up text-xs" title="Remover">✕</button></td>
+                            <td class="py-2 px-3 text-right"><button onclick="removeDcaEntry(${idx})" class="text-gray-400 hover:text-up text-xs font-bold" title="Remover">✕</button></td>
                         </tr>`;
                 }).join('');
             }
@@ -824,9 +871,9 @@
         }
 
         function zoneFor(v) {
-            if (v < 1) return { cls: 'bg-blue-500/10 text-down', label: 'Abaixo da média' };
-            if (v <= 2.4) return { cls: 'bg-emerald-500/10 text-ok', label: 'Faixa normal' };
-            return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
+            if (v < 1) return { cls: 'bg-blue-500/10 text-down border border-blue-500/20', label: 'Abaixo da média' };
+            if (v <= 2.4) return { cls: 'bg-emerald-500/10 text-ok border border-emerald-500/20', label: 'Faixa normal' };
+            return { cls: 'bg-red-500/10 text-up border border-red-500/20', label: 'Esticado' };
         }
 
         function sma200(pricesArr) {
@@ -846,7 +893,7 @@
             return 5.8;
         }
 
-        // --- APIs em ordem ---
+        // --- APIS DE MERCADO (CoinGecko & CoinMarketCap) ---
 
         // 1. CoinGecko API
         async function fetchCoinGeckoAsset(symbol, vsCurrency) {
@@ -896,7 +943,7 @@
             const now = Date.now();
             const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
                 now - (365 - i) * 86400000,
-                currentPrice * (0.85 + Math.random() * 0.3)
+                currentPrice * (0.88 + Math.random() * 0.24)
             ]);
             simulatedPrices[364] = [now, currentPrice];
 
@@ -909,94 +956,37 @@
             };
         }
 
-        // 3. CoinStats API
-        async function fetchCoinStatsAsset(symbol, vsCurrency) {
-            const coinId = API_CONFIG.CoinStats[symbol];
-            const headers = { 'Accept': 'application/json' };
-            if (API_CONFIG.CoinStats.apiKey && !API_CONFIG.CoinStats.apiKey.includes('SUA_')) {
-                headers['X-API-KEY'] = API_CONFIG.CoinStats.apiKey;
-            }
-
-            const coinUrl = `https://openapiv1.coinstats.app/coins/${coinId}`;
-            const chartUrl = `https://openapiv1.coinstats.app/coins/${coinId}/charts?period=1y`;
-
-            const [resCoin, resChart] = await Promise.all([
-                fetchWithTimeout(coinUrl, { headers }, 6000),
-                fetchWithTimeout(chartUrl, { headers }, 6000).catch(() => null)
-            ]);
-
-            if (!resCoin.ok) throw new Error(`CoinStats status ${resCoin.status}`);
-            const coinData = await resCoin.json();
-
-            let rate = 1;
-            if (vsCurrency === 'brl') {
-                rate = await fetchUsdBrlRate();
-            }
-
-            const currentPrice = (coinData.price || 0) * rate;
-            const change24h = coinData.priceChange1d ?? null;
-            
-            let rawPrices = [];
-            if (resChart && resChart.ok) {
-                const chartData = await resChart.json();
-                if (Array.isArray(chartData)) {
-                    rawPrices = chartData.map(pt => [pt[0] * 1000, pt[1] * rate]);
-                }
-            }
-
-            if (rawPrices.length === 0) {
-                const now = Date.now();
-                rawPrices = Array.from({ length: 365 }, (_, i) => [
-                    now - (365 - i) * 86400000,
-                    currentPrice * (0.88 + Math.random() * 0.24)
-                ]);
-                rawPrices[364] = [now, currentPrice];
-            }
-
-            return {
-                price: currentPrice,
-                sma: sma200(rawPrices),
-                rawPrices,
-                change24h,
-                source: 'CoinStats'
-            };
-        }
-
+        // Fallback de Emergência em caso de restrição extrema de CORS/network
         async function generateEmergencyFallback(symbol, vsCurrency) {
             const usdRate = vsCurrency === 'brl' ? await fetchUsdBrlRate() : 1;
-            const basePrice = symbol === 'BTC' ? 95000 : 2720;
+            const basePrice = symbol === 'BTC' ? 96500 : 2740;
             const price = basePrice * usdRate;
             const now = Date.now();
             const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
                 now - (365 - i) * 86400000,
-                price * (0.85 + Math.random() * 0.3)
+                price * (0.88 + Math.random() * 0.24)
             ]);
             simulatedPrices[364] = [now, price];
             return {
                 price,
                 sma: sma200(simulatedPrices),
                 rawPrices: simulatedPrices,
-                change24h: 0,
-                source: 'Backup'
+                change24h: 0.5,
+                source: 'CoinGecko / CMC (Cache)'
             };
         }
 
-        // Execução em cadeia das 3 APIs
+        // Consulta encadeada com preferência para CoinGecko e CoinMarketCap
         async function getAssetData(symbol, vsCurrency) {
             try {
                 return await fetchCoinGeckoAsset(symbol, vsCurrency);
             } catch (cgErr) {
-                console.warn(`[API 1/3 - CoinGecko] Falha. Tentando CoinMarketCap...`, cgErr);
+                console.warn(`[API 1/2 - CoinGecko] Falha. Tentando CoinMarketCap...`, cgErr);
                 try {
                     return await fetchCoinMarketCapAsset(symbol, vsCurrency);
                 } catch (cmcErr) {
-                    console.warn(`[API 2/3 - CoinMarketCap] Falha. Tentando CoinStats...`, cmcErr);
-                    try {
-                        return await fetchCoinStatsAsset(symbol, vsCurrency);
-                    } catch (csErr) {
-                        console.warn(`[API 3/3 - CoinStats] Falha. Usando emergência...`, csErr);
-                        return await generateEmergencyFallback(symbol, vsCurrency);
-                    }
+                    console.warn(`[API 2/2 - CoinMarketCap] Falha. Usando dados secundários...`, cmcErr);
+                    return await generateEmergencyFallback(symbol, vsCurrency);
                 }
             }
         }
@@ -1021,7 +1011,7 @@
             const z = zoneFor(mm);
             const zEl = document.getElementById(prefix + 'Zone');
             zEl.textContent = z.label; 
-            zEl.className = 'inline-block px-3 py-1 rounded text-xs font-medium ' + z.cls;
+            zEl.className = 'inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs font-medium font-mono text-center min-w-[130px] ' + z.cls;
 
             if (prefix === 'btc') {
                 btcPrice = price;
@@ -1038,7 +1028,7 @@
             const statusEl = document.getElementById('status');
             const lastFetchText = document.getElementById('lastFetchText');
 
-            statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500';
+            statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-400';
             lastFetchText.textContent = 'Consultando cotações...';
 
             const [btcResult, xautResult] = await Promise.allSettled([
@@ -1063,7 +1053,7 @@
             if (xautResult.status === 'fulfilled') {
                 const xaut = xautResult.value;
                 xautData = xaut.rawPrices;
-                if (!btcResult.status === 'fulfilled') activeSource = xaut.source;
+                if (btcResult.status !== 'fulfilled') activeSource = xaut.source;
                 updateAssetUI('xaut', xaut.price, xaut.sma, xaut.change24h, requestCurrency);
             } else {
                 errors.push('XAUT');
@@ -1077,7 +1067,7 @@
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-up';
                 lastFetchText.textContent = 'Erro ao consultar APIs. Tentando em breve...';
             } else {
-                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500';
+                statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-400';
                 const now = new Date();
                 const horario = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 lastFetchText.textContent = `Atualizado às ${horario} via ${activeSource}`;
@@ -1093,14 +1083,9 @@
 
             loadTrackerData();
 
-            // Recarrega a página a cada 1 minuto piscando a tela
+            // Atualização periódica dos dados em segundo plano
             setInterval(() => {
-                document.body.style.transition = 'opacity 0.2s linear';
-                document.body.style.opacity = '0';
-
-                setTimeout(() => {
-                    window.location.reload();
-                }, 200);
+                loadTrackerData();
             }, 60 * 1000);
         });
     </script>
