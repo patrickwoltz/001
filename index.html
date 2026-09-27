@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC vs. XAUt</title>
+    <title>Bitcoin &amp; Macro Tracker</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -64,19 +64,11 @@
 
     <!-- Header Minimalista -->
     <header class="fixed top-0 inset-x-0 z-50 bg-white/80 dark:bg-dark-900/80 backdrop-blur-md border-b border-gray-100 dark:border-dark-border transition-colors">
-        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
-            <a href="#" class="text-lg font-serif font-medium tracking-tight hover:opacity-70 transition">
-                Satoshi<span class="text-btc">.</span>
-            </a>
-
-            <nav class="hidden md:flex items-center space-x-8 text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                <a href="#tracker" class="hover:text-gray-900 dark:hover:text-white transition">Dashboard</a>
-                <a href="#cotacao" class="hover:text-gray-900 dark:hover:text-white transition">Mercado</a>
-            </nav>
-
+        <div class="max-w-5xl mx-auto px-6 h-20 flex items-center justify-end">
             <button id="themeToggle" class="text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-btc transition focus:outline-none">
-                <span class="dark:hidden">Escuro</span>
-                <span class="hidden dark:inline">Claro</span>
+                <!-- Ícones simples ou texto limpo -->
+                <span class="dark:hidden">Modo Escuro</span>
+                <span class="hidden dark:inline">Modo Claro</span>
             </button>
         </div>
     </header>
@@ -89,7 +81,8 @@
                 <!-- Masthead Status -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-gray-200 dark:border-dark-border gap-4">
                     <div>
-                        <h2 class="text-xl font-serif mt-1">BTC vs. XAUt Tracker</h2>
+                        <span class="text-xs font-mono text-btc tracking-widest uppercase block">Métricas Globais</span>
+                        <h2 class="text-xl font-serif mt-1">BTC &amp; Tether Gold vs. MM200</h2>
                     </div>
                     
                     <div class="flex flex-col sm:items-end gap-1">
