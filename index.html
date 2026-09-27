@@ -360,6 +360,17 @@
             selectedCurrency = curr;
             try { localStorage.setItem('btcTracker.currency', curr); } catch (e) {}
             updateCurrencyButtons(curr);
+
+            // Evita mostrar o valor da moeda antiga com o rótulo da moeda nova enquanto a busca não termina
+            ['btcPriceOut', 'btcAthOut', 'xautPriceOut', 'xautAthOut'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'Atualizando...';
+            });
+            ['btcChangeOut', 'xautChangeOut'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+
             renderDcaTable();
             loadTrackerData();
         }
@@ -831,19 +842,19 @@
             };
         }
 
-        async function getAssetData(coingeckoId, cmcId, symbol) {
+        async function getAssetData(coingeckoId, cmcId, symbol, vsCurrency) {
             try {
-                return await fetchCoinGeckoAsset(coingeckoId, selectedCurrency);
+                return await fetchCoinGeckoAsset(coingeckoId, vsCurrency);
             } catch (cgErr) {
                 console.warn(`[Fallback] CoinGecko falhou para ${symbol}. Alternando para CoinMarketCap...`, cgErr);
-                return await fetchCMCAsset(cmcId, symbol, selectedCurrency);
+                return await fetchCMCAsset(cmcId, symbol, vsCurrency);
             }
         }
 
-        function updateAssetUI(prefix, price, sma, ath, athDate, change24h) {
+        function updateAssetUI(prefix, price, sma, ath, athDate, change24h, currency) {
             const mm = sma > 0 ? (price / sma) : 1;
-            document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, selectedCurrency);
-            document.getElementById(prefix + 'AthOut').textContent = fmtCurrency(ath, selectedCurrency);
+            document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, currency);
+            document.getElementById(prefix + 'AthOut').textContent = fmtCurrency(ath, currency);
             document.getElementById(prefix + 'AthDate').textContent = athDate;
             document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
 
@@ -869,7 +880,15 @@
             }
         }
 
+        // Contador de geração: cada chamada a loadTrackerData recebe um número.
+        // Se uma chamada mais nova começar antes de uma antiga terminar, a antiga é descartada
+        // ao concluir — evita misturar dados de USD com BRL quando o usuário troca de moeda rápido.
+        let fetchGeneration = 0;
+
         async function loadTrackerData() {
+            const myGen = ++fetchGeneration;
+            const requestCurrency = selectedCurrency; // trava a moeda usada durante toda esta busca
+
             const statusEl = document.getElementById('status');
             const lastFetchText = document.getElementById('lastFetchText');
 
@@ -880,28 +899,34 @@
             const errors = [];
 
             try {
-                const btc = await getAssetData('bitcoin', '1', 'BTC');
+                const btc = await getAssetData('bitcoin', '1', 'BTC', requestCurrency);
+                if (myGen !== fetchGeneration) return; // uma busca mais nova já assumiu
                 results.btc = btc;
                 btcData = btc.rawPrices;
-                updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h);
+                updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate, btc.change24h, requestCurrency);
                 updateHalvingCountdown();
             } catch (err) {
+                if (myGen !== fetchGeneration) return;
                 errors.push('BTC');
                 console.error('Erro ao buscar BTC:', err);
             }
 
             await delay(800);
+            if (myGen !== fetchGeneration) return;
 
             try {
-                const xaut = await getAssetData('tether-gold', '5176', 'XAUT');
+                const xaut = await getAssetData('tether-gold', '5176', 'XAUT', requestCurrency);
+                if (myGen !== fetchGeneration) return;
                 results.xaut = xaut;
                 xautData = xaut.rawPrices;
-                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate, xaut.change24h);
+                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate, xaut.change24h, requestCurrency);
             } catch (err) {
+                if (myGen !== fetchGeneration) return;
                 errors.push('XAUT');
                 console.error('Erro ao buscar XAUT:', err);
             }
 
+            if (myGen !== fetchGeneration) return;
             if (results.btc || results.xaut) renderChart();
 
             // Aviso de dados simulados (quando algum ativo caiu no fallback CMC)
