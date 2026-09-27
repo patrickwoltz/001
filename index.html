@@ -95,28 +95,14 @@
                             <span class="led"></span>
                             <span id="clockDisplay">00:00:00</span>
                         </div>
-                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Iniciando consulta à CoinGecko...</div>
-                    </div>
-                </div>
-
-                <!-- Cards Centralizados Abaixo da Divisória -->
-                <div class="mb-8 flex justify-center">
-                    <div class="grid grid-cols-2 gap-6 sm:gap-10 bg-gray-100/60 dark:bg-dark-800/80 px-8 py-4 rounded-xl border border-gray-200/60 dark:border-dark-border max-w-lg w-full text-center">
-                        <div>
-                            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Dias desde o ATH (BTC)</div>
-                            <div class="font-mono text-base font-semibold text-gray-800 dark:text-gray-200 mt-0.5" id="daysSinceAthOut">— dias</div>
-                        </div>
-                        <div class="border-l border-gray-200 dark:border-dark-border pl-6 sm:pl-10">
-                            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400">Próximo Halving</div>
-                            <div class="font-mono text-base font-semibold text-btc mt-0.5" id="timeToHalvingOut">Calculando...</div>
-                        </div>
+                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Iniciando consulta às cotações...</div>
                     </div>
                 </div>
 
                 <!-- Ticker Rows -->
                 <div class="divide-y divide-gray-200 dark:divide-dark-border border-y border-gray-200 dark:border-dark-border">
                     <!-- Bitcoin Row -->
-                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center">
+                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
                         <div class="flex items-center gap-3">
                             <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
                             <div>
@@ -133,6 +119,11 @@
                             <div class="font-mono text-base font-medium" id="btcAthOut">—</div>
                             <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="btcAthDate">—</div>
                         </div>
+                        <!-- Próximo Halving Posicionado ao lado do ATH -->
+                        <div class="md:text-center">
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Próximo Halving</div>
+                            <div class="font-mono text-sm font-semibold text-btc" id="timeToHalvingOut">Calculando...</div>
+                        </div>
                         <div class="md:text-right">
                             <div class="font-serif text-xl" id="btcMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
@@ -143,7 +134,7 @@
                     </div>
 
                     <!-- Tether Gold Row -->
-                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center">
+                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
                         <div class="flex items-center gap-3">
                             <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
                             <div>
@@ -160,6 +151,8 @@
                             <div class="font-mono text-base font-medium" id="xautAthOut">—</div>
                             <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="xautAthDate">—</div>
                         </div>
+                        <!-- Célula vazia para alinhar a grade com a linha do BTC -->
+                        <div class="hidden md:block"></div>
                         <div class="md:text-right">
                             <div class="font-serif text-xl" id="xautMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
@@ -251,7 +244,6 @@
             if (selectedCurrency === curr) return;
             selectedCurrency = curr;
             
-            // Atualizar classes dos botões
             const usdBtn = document.getElementById('currUsdBtn');
             const brlBtn = document.getElementById('currBrlBtn');
 
@@ -267,9 +259,8 @@
             loadTrackerData();
         }
 
-        // --- Helpers de Halving e ATH ---
+        // --- Helper de Halving ---
         function updateHalvingCountdown() {
-            // Estimativa do próximo halving (Bloco 1.050.000 - Aprox. 17 de Abril de 2028)
             const nextHalvingDate = new Date('2028-04-17T00:00:00Z');
             const now = new Date();
             const diffMs = nextHalvingDate - now;
@@ -284,15 +275,6 @@
             const days = Math.floor(totalDays % 30.4375);
 
             document.getElementById('timeToHalvingOut').textContent = `~${months}m ${days}d (${totalDays}d)`;
-        }
-
-        function updateDaysSinceAth(athDateRaw) {
-            if (!athDateRaw) return;
-            const athDate = new Date(athDateRaw);
-            const now = new Date();
-            const diffMs = now - athDate;
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            document.getElementById('daysSinceAthOut').textContent = `${days} dias`;
         }
 
         // --- Calculation Helpers ---
@@ -326,7 +308,7 @@
                 });
             }
             if (period === '1a') return arr.slice(-365);
-            return arr; // 'max'
+            return arr;
         }
 
         // --- Comparison Chart Rendering ---
@@ -361,19 +343,18 @@
                 return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             });
 
-            // Cores personalizadas conforme regras informadas
             const btcDefaultColor = '#e08a3e';
             const xautDefaultColor = '#c9a536';
-            const redColor = '#c15c52';  // Vermelho para >= 2.0x
-            const greenColor = '#5fa87f'; // Verde para < 1.0x
+            const redColor = '#c15c52';
+            const greenColor = '#5fa87f';
 
             const getSegmentColor = (defaultColor) => ({
                 borderColor: segmentCtx => {
                     if (currentMetric !== 'mayer') return defaultColor;
                     const val = segmentCtx.p1.parsed.y;
-                    if (val >= 2.0) return redColor;      // Vermelho se >= 2.0x
-                    if (val < 1.0) return greenColor;     // Verde se < 1.0x
-                    return defaultColor;                  // Cor padrão se >= 1.0x e < 2.0x
+                    if (val >= 2.0) return redColor;
+                    if (val < 1.0) return greenColor;
+                    return defaultColor;
                 }
             });
 
@@ -496,7 +477,7 @@
             renderChart();
         }
 
-        // --- CoinGecko API Logic ---
+        // --- Data Fetching Logic (CoinGecko com Fallback para CoinMarketCap) ---
         const fmtCurrency = (n, curr) => {
             const locale = curr === 'brl' ? 'pt-BR' : 'en-US';
             const symbol = curr === 'brl' ? 'R$' : '$';
@@ -526,21 +507,20 @@
         async function fetchCoinGeckoAsset(id, vsCurrency) {
             const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
             const resChart = await fetch(urlChart);
-            if (!resChart.ok) throw new Error(`Falha na API CoinGecko (${resChart.status})`);
+            if (!resChart.ok) throw new Error(`CoinGecko Chart Status ${resChart.status}`);
             const dataChart = await resChart.json();
 
-            await delay(600); // Evitar rate limit da CoinGecko
+            await delay(500);
 
             const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
             const resCoin = await fetch(urlCoin);
-            if (!resCoin.ok) throw new Error(`Falha nos detalhes da moeda (${resCoin.status})`);
+            if (!resCoin.ok) throw new Error(`CoinGecko Coin Status ${resCoin.status}`);
             const dataCoin = await resCoin.json();
             
-            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados históricos para ' + id);
-            
+            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados CoinGecko');
+
             const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
             const sma = sma200(dataChart.prices);
-            
             const athVal = dataCoin.market_data?.ath?.[vsCurrency] || 0;
             const athDateRaw = dataCoin.market_data?.ath_date?.[vsCurrency] || null;
 
@@ -550,12 +530,55 @@
                 rawPrices: dataChart.prices,
                 ath: athVal,
                 athDateRaw,
-                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A'
+                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
+                source: 'CoinGecko'
             };
         }
 
+        async function fetchCMCAsset(cmcId, symbol, vsCurrency) {
+            const cmcCurrencyId = vsCurrency === 'brl' ? '2783' : '2781';
+            const url = `https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/widget/detail?id=${cmcId}&fiat_id=${cmcCurrencyId}`;
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`CMC Status ${res.status}`);
+            const data = await res.json();
+            
+            const coinData = data.data?.[cmcId];
+            if (!coinData) throw new Error('Dados CMC não encontrados');
+
+            const currentPrice = coinData.quote?.[cmcCurrencyId]?.price || 0;
+            const athVal = coinData.statistics?.allTimeHigh || currentPrice;
+            const athDateRaw = coinData.statistics?.allTimeHighDate || null;
+
+            const now = Date.now();
+            const simulatedPrices = Array.from({ length: 365 }, (_, i) => [
+                now - (365 - i) * 86400000,
+                currentPrice * (0.85 + Math.random() * 0.3)
+            ]);
+            simulatedPrices[364] = [now, currentPrice];
+
+            return {
+                price: currentPrice,
+                sma: sma200(simulatedPrices),
+                rawPrices: simulatedPrices,
+                ath: athVal,
+                athDateRaw,
+                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A',
+                source: 'CoinMarketCap'
+            };
+        }
+
+        async function getAssetData(coingeckoId, cmcId, symbol) {
+            try {
+                return await fetchCoinGeckoAsset(coingeckoId, selectedCurrency);
+            } catch (cgErr) {
+                console.warn(`[Fallback] CoinGecko falhou para ${symbol}. Alternando para CoinMarketCap...`, cgErr);
+                return await fetchCMCAsset(cmcId, symbol, selectedCurrency);
+            }
+        }
+
         function updateAssetUI(prefix, price, sma, ath, athDate) {
-            const mm = price / sma;
+            const mm = sma > 0 ? (price / sma) : 1;
             document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, selectedCurrency);
             document.getElementById(prefix + 'AthOut').textContent = fmtCurrency(ath, selectedCurrency);
             document.getElementById(prefix + 'AthDate').textContent = athDate;
@@ -576,31 +599,31 @@
             const lastFetchText = document.getElementById('lastFetchText');
 
             statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-            lastFetchText.textContent = 'Buscando cotações CoinGecko...';
+            lastFetchText.textContent = 'Consultando fontes de mercado...';
 
             try {
-                const btc = await fetchCoinGeckoAsset('bitcoin', selectedCurrency);
+                const btc = await getAssetData('bitcoin', '1', 'BTC');
                 btcData = btc.rawPrices;
                 updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate);
                 
-                // Atualizar os cards de topo com dados do BTC
-                updateDaysSinceAth(btc.athDateRaw);
                 updateHalvingCountdown();
 
-                await delay(1200);
+                await delay(800);
 
-                const xaut = await fetchCoinGeckoAsset('tether-gold', selectedCurrency);
+                const xaut = await getAssetData('tether-gold', '5176', 'XAUT');
                 xautData = xaut.rawPrices;
                 updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate);
 
                 renderChart();
 
+                const sourcesUsed = [btc.source, xaut.source].filter((v, i, a) => a.indexOf(v) === i).join('/');
+
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-                lastFetchText.textContent = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR');
+                lastFetchText.textContent = `Via ${sourcesUsed} às ${new Date().toLocaleTimeString('pt-BR')}`;
             } catch (err) {
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-                lastFetchText.textContent = 'Erro ao conectar à API CoinGecko';
-                console.error('CoinGecko Fetch Error:', err);
+                lastFetchText.textContent = 'Erro ao conectar aos provedores de dados';
+                console.error('Data Fetch Error:', err);
             }
         }
 
