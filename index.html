@@ -43,12 +43,18 @@
   .status{
     font-size:12px;color:var(--muted-dim);display:flex;align-items:center;gap:7px;
     white-space:nowrap;flex-shrink:0;
+    font-family:'IBM Plex Mono',monospace;
   }
   .status .led{width:6px;height:6px;border-radius:50%;background:var(--muted-dim);}
   .status.live .led{background:var(--ok);animation:pulse 2.4s ease-in-out infinite;}
   .status.err .led{background:var(--up);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
   @media (prefers-reduced-motion:reduce){.status.live .led{animation:none;}}
+
+  .last-fetch{
+    font-size:11px;color:var(--muted-dim);margin-top:6px;text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+  }
 
   .sub{color:var(--muted-dim);font-size:13.5px;line-height:1.6;max-width:52ch;margin:12px auto 0;text-align:center;}
 
@@ -143,9 +149,12 @@
   <div class="masthead">
     <div class="masthead-top">
       <h1>BTC/XAUt Tracking</h1>
-      <div class="status" id="status"><span class="led"></span><span id="statusText">Carregando dados</span></div>
+      <div class="status" id="status">
+        <span class="led"></span>
+        <span id="clockDisplay">00:00:00</span>
+      </div>
     </div>
-    <p class="sub"></p>
+    <div class="last-fetch" id="lastFetchText">Carregando dados...</div>
   </div>
 
   <div class="hero">
@@ -183,8 +192,7 @@
 
   <div class="note">
     <strong>Como isto funciona:</strong> esta página busca preços e histórico de 200 dias diretamente
-    da API pública da CoinGecko (<code>api.coingecko.com</code>). Para evitar bloqueios de CORS em ambientes
-    restritos, execute este arquivo localmente no navegador ou via servidor web.
+    da API pública da CoinGecko (<code>api.coingecko.com</code>).
   </div>
   <footer>Mayer Multiple = preço atual ÷ média móvel simples de 200 dias · dados via API pública da CoinGecko</footer>
 </div>
@@ -193,6 +201,17 @@
 const MIN = 0.6, MAX = 2.6;
 const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2});
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- Relógio em tempo real ---
+function startClock() {
+  const clockEl = document.getElementById('clockDisplay');
+  function update() {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('pt-BR');
+  }
+  update();
+  setInterval(update, 1000);
+}
 
 function zoneFor(v){
   if(v < 1) return {cls:'z-down', label:'Abaixo da média'};
@@ -237,16 +256,14 @@ function paint(prefix, price, sma){
 
 async function load(){
   const statusEl = document.getElementById('status');
-  const statusText = document.getElementById('statusText');
-  statusEl.className = 'status';
-  statusText.textContent = 'Carregando dados...';
+  const lastFetchText = document.getElementById('lastFetchText');
+  
+  lastFetchText.textContent = 'Buscando cotações atualizadas...';
   
   try {
-    // Alinha marcadores de referência fixos na barra
     document.getElementById('ref1').style.left = pct(1.0) + '%';
     document.getElementById('ref24').style.left = pct(2.4) + '%';
 
-    // Requisições sequenciais com pequeno intervalo para evitar rate limit (HTTP 429)
     const btc = await fetchAsset('bitcoin');
     await delay(300);
     const xaut = await fetchAsset('tether-gold');
@@ -255,16 +272,18 @@ async function load(){
     paint('xaut', xaut.price, xaut.sma);
 
     statusEl.className = 'status live';
-    statusText.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+    lastFetchText.textContent = 'Última atualização dos dados às ' + new Date().toLocaleTimeString('pt-BR');
   } catch(err) {
     statusEl.className = 'status err';
-    statusText.textContent = 'Falha: ' + err.message;
+    lastFetchText.textContent = 'Falha: ' + err.message;
   }
 }
 
+// Inicialização
+startClock();
 document.getElementById('refreshBtn').addEventListener('click', load);
 load();
-setInterval(load, 60000);
+setInterval(load, 60000); // Recarrega os dados da API a cada 1 minuto
 </script>
 </body>
 </html>
