@@ -21,8 +21,6 @@
     --up: #c15c52;
     --ok: #5fa87f;
     --down: #5b93b8;
-    --blue: #2563eb;
-    --box-bg: #12161f;
   }
 
   * { box-sizing: border-box; }
@@ -95,51 +93,6 @@
     .zone { grid-column: 1/3; justify-self: start; }
   }
 
-  /* Market Section */
-  .market-section { border-top: 1px solid var(--line); padding-top: 36px; margin-top: 36px; }
-  .section-title { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 20px; margin: 0 0 20px 0; color: var(--text); }
-  .table-wrap { width: 100%; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; text-align: left; }
-  th {
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted-dim);
-    letter-spacing: 0.05em; padding: 12px 14px; border-bottom: 1px solid var(--line); text-transform: uppercase;
-  }
-  td { padding: 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
-  tr:hover { background-color: var(--bg-raised); }
-  
-  .col-num { font-family: 'IBM Plex Mono', monospace; color: var(--muted-dim); font-size: 12.5px; width: 36px; }
-  .asset-cell { display: flex; align-items: center; gap: 12px; }
-  .symbol-box {
-    width: 38px; height: 38px; background: var(--box-bg); border: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); border-radius: 2px;
-  }
-  .asset-info .name { font-size: 14px; font-weight: 500; color: var(--text); display: block; }
-  .asset-info .ticker { font-size: 11.5px; color: var(--muted-dim); font-family: 'IBM Plex Mono', monospace; }
-  .price { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--text); }
-  .change { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
-  .change.up { color: var(--ok); }
-  .change.down { color: var(--up); }
-  .market-cap { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--muted); }
-  
-  .btn-swap {
-    background: transparent; border: 1px solid var(--line); color: var(--muted);
-    padding: 6px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;
-    border-radius: 2px; cursor: pointer; transition: all 0.15s;
-  }
-  .btn-swap:hover { border-color: var(--muted-dim); color: var(--text); }
-  .btn-swap.primary { background: var(--blue); border-color: var(--blue); color: #ffffff; }
-  .btn-swap.primary:hover { background: #1d4ed8; }
-
-  button#refreshBtn {
-    margin-top: 28px; background: transparent; border: 1px solid var(--line); color: var(--muted);
-    padding: 10px 18px; border-radius: 2px; font-size: 13px; cursor: pointer;
-    font-family: Inter, sans-serif; letter-spacing: .01em; transition: all .15s;
-  }
-  button#refreshBtn:hover:not(:disabled) { border-color: var(--muted-dim); color: var(--text); }
-  button#refreshBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-  button#refreshBtn:focus-visible { outline: 2px solid var(--xaut); outline-offset: 2px; }
-
   .note {
     margin-top: 44px; padding: 18px 20px; border-left: 2px solid var(--line);
     font-size: 13px; color: var(--muted-dim); line-height: 1.65;
@@ -190,29 +143,6 @@
     </div>
   </div>
 
-  <div class="market-section">
-    <h2 class="section-title">Mercado BRL</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Ativo</th>
-            <th>Preço</th>
-            <th>24H</th>
-            <th>Cap. Mercado</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody id="cryptoTable">
-          <!-- Linhas geradas via JS -->
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <button id="refreshBtn">Atualizar agora</button>
-
   <div class="note">
     <strong>Como isto funciona:</strong> esta página busca preços e histórico de 200 dias diretamente da API pública da CoinGecko (<code>api.coingecko.com</code>).
   </div>
@@ -221,22 +151,6 @@
 
 <script>
 const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2 });
-const fmtBRL = n => 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const ASSETS_BRL = [
-  { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', num: '01', isPrimary: true },
-  { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', num: '02' },
-  { id: 'solana', symbol: 'SOL', name: 'Solana', num: '03' },
-  { id: 'binancecoin', symbol: 'BNB', name: 'BNB', num: '04' },
-  { id: 'ripple', symbol: 'XRP', name: 'XRP', num: '05' }
-];
-
-function formatCapBRL(n) {
-  if (!n) return '—';
-  if (n >= 1e12) return 'R$ ' + (n / 1e12).toFixed(1).replace('.', ',') + ' tri';
-  if (n >= 1e9) return 'R$ ' + (n / 1e9).toFixed(1).replace('.', ',') + ' bi';
-  return 'R$ ' + (n / 1e6).toFixed(1).replace('.', ',') + ' mi';
-}
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -295,54 +209,10 @@ function paintUSD(prefix, price, sma) {
   zEl.className = 'zone ' + z.cls;
 }
 
-async function loadMarketBRL() {
-  const ids = ASSETS_BRL.map(a => a.id).join(',');
-  const data = await fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=brl&include_24hr_change=true&include_market_cap=true`);
-
-  const tbody = document.getElementById('cryptoTable');
-  tbody.innerHTML = '';
-
-  ASSETS_BRL.forEach(asset => {
-    const info = data[asset.id];
-    if (!info) return;
-
-    const price = info.brl;
-    const change = info.brl_24h_change || 0;
-    const mcap = info.brl_market_cap;
-
-    const isUp = change >= 0;
-    const changeClass = isUp ? 'up' : 'down';
-    const changeSign = isUp ? '+' : '';
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="col-num">${asset.num}</td>
-      <td>
-        <div class="asset-cell">
-          <div class="symbol-box">${asset.symbol}</div>
-          <div class="asset-info">
-            <span class="name">${asset.name}</span>
-            <span class="ticker">${asset.symbol}</span>
-          </div>
-        </div>
-      </td>
-      <td class="price">${fmtBRL(price)}</td>
-      <td class="change ${changeClass}">${changeSign}${change.toFixed(2)}%</td>
-      <td class="market-cap">${formatCapBRL(mcap)}</td>
-      <td>
-        <button class="btn-swap ${asset.isPrimary ? 'primary' : ''}">Trocar</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
 async function load() {
   const statusEl = document.getElementById('status');
   const lastFetchText = document.getElementById('lastFetchText');
-  const btn = document.getElementById('refreshBtn');
 
-  btn.disabled = true;
   statusEl.className = 'status loading';
   lastFetchText.textContent = 'Buscando cotações atualizadas...';
 
@@ -354,22 +224,16 @@ async function load() {
     paintUSD('btc', btc.price, btc.sma);
     paintUSD('xaut', xaut.price, xaut.sma);
 
-    await delay(500);
-    await loadMarketBRL();
-
     statusEl.className = 'status live';
     lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
   } catch (err) {
     statusEl.className = 'status err';
     lastFetchText.textContent = 'Falha: ' + err.message;
-  } finally {
-    btn.disabled = false;
   }
 }
 
 // Inicialização
 startClock();
-document.getElementById('refreshBtn').addEventListener('click', load);
 load();
 setInterval(load, 120000);
 </script>
