@@ -102,7 +102,7 @@
                 <!-- Ticker Rows -->
                 <div class="divide-y divide-gray-200 dark:divide-dark-border border-y border-gray-200 dark:border-dark-border">
                     <!-- Bitcoin Row -->
-                    <div class="py-6 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center">
                         <div class="flex items-center gap-3">
                             <span class="w-2.5 h-2.5 rounded-full bg-btc shrink-0"></span>
                             <div>
@@ -112,19 +112,24 @@
                         </div>
                         <div class="md:text-center">
                             <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-lg font-medium" id="btcPriceOut">Carregando...</div>
+                            <div class="font-mono text-base font-medium" id="btcPriceOut">Carregando...</div>
+                        </div>
+                        <div class="md:text-center">
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
+                            <div class="font-mono text-base font-medium" id="btcAthOut">—</div>
+                            <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="btcAthDate">—</div>
                         </div>
                         <div class="md:text-right">
-                            <div class="font-serif text-2xl" id="btcMM">—</div>
+                            <div class="font-serif text-xl" id="btcMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
                         </div>
-                        <div class="col-span-2 md:col-span-1 md:justify-self-end">
+                        <div class="col-span-2 sm:col-span-1 md:justify-self-end">
                             <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
                         </div>
                     </div>
 
                     <!-- Tether Gold Row -->
-                    <div class="py-6 grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                    <div class="py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 items-center">
                         <div class="flex items-center gap-3">
                             <span class="w-2.5 h-2.5 rounded-full bg-xaut shrink-0"></span>
                             <div>
@@ -134,13 +139,18 @@
                         </div>
                         <div class="md:text-center">
                             <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (<span class="currencyLabel">USD</span>)</div>
-                            <div class="font-mono text-lg font-medium" id="xautPriceOut">Carregando...</div>
+                            <div class="font-mono text-base font-medium" id="xautPriceOut">Carregando...</div>
+                        </div>
+                        <div class="md:text-center">
+                            <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">ATH (<span class="currencyLabel">USD</span>)</div>
+                            <div class="font-mono text-base font-medium" id="xautAthOut">—</div>
+                            <div class="text-[10px] font-mono text-gray-400 dark:text-gray-500" id="xautAthDate">—</div>
                         </div>
                         <div class="md:text-right">
-                            <div class="font-serif text-2xl" id="xautMM">—</div>
+                            <div class="font-serif text-xl" id="xautMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
                         </div>
-                        <div class="col-span-2 md:col-span-1 md:justify-self-end">
+                        <div class="col-span-2 sm:col-span-1 md:justify-self-end">
                             <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
                         </div>
                     </div>
@@ -472,21 +482,40 @@
         }
 
         async function fetchCoinGeckoAsset(id, vsCurrency) {
-            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Falha na API CoinGecko (${res.status})`);
-            const data = await res.json();
+            const urlChart = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${vsCurrency}&days=365&interval=daily`;
+            const resChart = await fetch(urlChart);
+            if (!resChart.ok) throw new Error(`Falha na API CoinGecko (${resChart.status})`);
+            const dataChart = await resChart.json();
+
+            await delay(600); // Evitar rate limit da CoinGecko
+
+            const urlCoin = `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`;
+            const resCoin = await fetch(urlCoin);
+            if (!resCoin.ok) throw new Error(`Falha nos detalhes da moeda (${resCoin.status})`);
+            const dataCoin = await resCoin.json();
             
-            if (!data.prices || data.prices.length === 0) throw new Error('Sem dados históricos para ' + id);
+            if (!dataChart.prices || dataChart.prices.length === 0) throw new Error('Sem dados históricos para ' + id);
             
-            const currentPrice = data.prices[data.prices.length - 1][1];
-            const sma = sma200(data.prices);
-            return { price: currentPrice, sma, rawPrices: data.prices };
+            const currentPrice = dataChart.prices[dataChart.prices.length - 1][1];
+            const sma = sma200(dataChart.prices);
+            
+            const athVal = dataCoin.market_data?.ath?.[vsCurrency] || 0;
+            const athDateRaw = dataCoin.market_data?.ath_date?.[vsCurrency] || null;
+
+            return { 
+                price: currentPrice, 
+                sma, 
+                rawPrices: dataChart.prices,
+                ath: athVal,
+                athDate: athDateRaw ? new Date(athDateRaw).toLocaleDateString('pt-BR') : 'N/A'
+            };
         }
 
-        function updateAssetUI(prefix, price, sma) {
+        function updateAssetUI(prefix, price, sma, ath, athDate) {
             const mm = price / sma;
             document.getElementById(prefix + 'PriceOut').textContent = fmtCurrency(price, selectedCurrency);
+            document.getElementById(prefix + 'AthOut').textContent = fmtCurrency(ath, selectedCurrency);
+            document.getElementById(prefix + 'AthDate').textContent = athDate;
             document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
             
             const z = zoneFor(mm);
@@ -509,13 +538,13 @@
             try {
                 const btc = await fetchCoinGeckoAsset('bitcoin', selectedCurrency);
                 btcData = btc.rawPrices;
-                updateAssetUI('btc', btc.price, btc.sma);
+                updateAssetUI('btc', btc.price, btc.sma, btc.ath, btc.athDate);
 
                 await delay(1200);
 
                 const xaut = await fetchCoinGeckoAsset('tether-gold', selectedCurrency);
                 xautData = xaut.rawPrices;
-                updateAssetUI('xaut', xaut.price, xaut.sma);
+                updateAssetUI('xaut', xaut.price, xaut.sma, xaut.ath, xaut.athDate);
 
                 renderChart();
 
