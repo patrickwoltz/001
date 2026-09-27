@@ -98,7 +98,7 @@
                             <span class="led"></span>
                             <span id="clockDisplay">00:00:00</span>
                         </div>
-                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Carregando dados...</div>
+                        <div class="text-[11px] font-mono text-gray-400 dark:text-gray-500" id="lastFetchText">Iniciando consulta à CoinGecko...</div>
                     </div>
                 </div>
 
@@ -115,14 +115,14 @@
                         </div>
                         <div class="md:text-center">
                             <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
-                            <div class="font-mono text-lg font-medium" id="btcPriceOut">—</div>
+                            <div class="font-mono text-lg font-medium" id="btcPriceOut">Carregando...</div>
                         </div>
                         <div class="md:text-right">
                             <div class="font-serif text-2xl" id="btcMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
                         </div>
                         <div class="col-span-2 md:col-span-1 md:justify-self-end">
-                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone"></span>
+                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="btcZone">Calculando...</span>
                         </div>
                     </div>
 
@@ -137,14 +137,14 @@
                         </div>
                         <div class="md:text-center">
                             <div class="text-[10px] font-mono uppercase text-gray-400 mb-0.5">Preço (USD)</div>
-                            <div class="font-mono text-lg font-medium" id="xautPriceOut">—</div>
+                            <div class="font-mono text-lg font-medium" id="xautPriceOut">Carregando...</div>
                         </div>
                         <div class="md:text-right">
                             <div class="font-serif text-2xl" id="xautMM">—</div>
                             <div class="text-[10px] font-mono uppercase text-gray-400">Múltiplo MM200</div>
                         </div>
                         <div class="col-span-2 md:col-span-1 md:justify-self-end">
-                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone"></span>
+                            <span class="inline-block px-3 py-1 rounded text-xs font-medium" id="xautZone">Calculando...</span>
                         </div>
                     </div>
                 </div>
@@ -163,10 +163,10 @@
                     
                     <!-- Clean Period Filters -->
                     <div class="flex space-x-6 text-xs font-mono text-gray-400 mt-4 md:mt-0">
-                        <button onclick="updateChart('24h')" class="chart-btn active text-btc underline underline-offset-8">24H</button>
-                        <button onclick="updateChart('7d')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">7D</button>
-                        <button onclick="updateChart('1m')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1M</button>
-                        <button onclick="updateChart('1a')" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1A</button>
+                        <button onclick="changeChartPeriod('24h', event)" class="chart-btn active text-btc underline underline-offset-8">24H</button>
+                        <button onclick="changeChartPeriod('7d', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">7D</button>
+                        <button onclick="changeChartPeriod('1m', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1M</button>
+                        <button onclick="changeChartPeriod('1a', event)" class="chart-btn hover:text-gray-900 dark:hover:text-white transition">1A</button>
                     </div>
                 </div>
 
@@ -219,24 +219,29 @@
         </div>
     </footer>
 
-    <!-- Logic Script -->
+    <!-- Logic Script Integration with CoinGecko -->
     <script>
+        // Global variables for live prices
+        let btcPriceUsd = 0;
+        let usdRateBrl = 5.60; 
+        let btcHistoricalPrices = [];
+        let btcChartInstance = null;
+        let currentPeriod = '24h';
+
         // --- Dark Mode Switcher ---
         const themeToggleBtn = document.getElementById('themeToggle');
         themeToggleBtn.addEventListener('click', () => {
             document.documentElement.classList.toggle('dark');
-            initOrUpdateChart();
+            renderChart();
         });
 
         // --- Currency Converter ---
-        let btcPriceUsd = 65000;
-        let usdRateBrl = 5.64;
-
         const calcBtc = document.getElementById('calcBtc');
         const calcBrl = document.getElementById('calcBrl');
         const calcUsd = document.getElementById('calcUsd');
 
         function updateFromBtc() {
+            if (!btcPriceUsd) return;
             const btc = parseFloat(calcBtc.value) || 0;
             const usd = btc * btcPriceUsd;
             calcUsd.value = usd.toFixed(2);
@@ -244,6 +249,7 @@
         }
 
         function updateFromBrl() {
+            if (!btcPriceUsd || !usdRateBrl) return;
             const brl = parseFloat(calcBrl.value) || 0;
             const usd = brl / usdRateBrl;
             calcUsd.value = usd.toFixed(2);
@@ -251,6 +257,7 @@
         }
 
         function updateFromUsd() {
+            if (!btcPriceUsd) return;
             const usd = parseFloat(calcUsd.value) || 0;
             calcBrl.value = (usd * usdRateBrl).toFixed(2);
             calcBtc.value = (usd / btcPriceUsd).toFixed(6);
@@ -260,35 +267,42 @@
         calcBrl.addEventListener('input', updateFromBrl);
         calcUsd.addEventListener('input', updateFromUsd);
 
-        // --- Chart.js Implementation ---
-        let btcChartInstance = null;
-        const chartDataSets = {
-            '24h': { labels: ['00h', '04h', '08h', '12h', '16h', '20h', 'Agora'], data: [63200, 63500, 63150, 64200, 64800, 65100, 65420] },
-            '7d': { labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'], data: [61000, 62500, 61800, 63400, 64200, 64900, 65420] },
-            '1m': { labels: ['S1', 'S2', 'S3', 'S4'], data: [58000, 60500, 62800, 65420] },
-            '1a': { labels: ['Jan', 'Mar', 'Mai', 'Jul', 'Set', 'Nov'], data: [42000, 51000, 58000, 61000, 63000, 65420] }
-        };
+        // --- Chart rendering ---
+        function filterDataForPeriod(prices, period) {
+            if (!prices || prices.length === 0) return { labels: [], data: [] };
+            
+            let sliced = [];
+            if (period === '24h') sliced = prices.slice(-24);
+            else if (period === '7d') sliced = prices.slice(-7);
+            else if (period === '1m') sliced = prices.slice(-30);
+            else sliced = prices;
 
-        let currentPeriod = '24h';
+            const labels = sliced.map(p => {
+                const date = new Date(p[0]);
+                if (period === '24h') return date.getHours() + 'h';
+                return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            });
 
-        function initOrUpdateChart() {
+            const data = sliced.map(p => p[1]);
+            return { labels, data };
+        }
+
+        function renderChart() {
             const ctx = document.getElementById('btcChart').getContext('2d');
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor = isDark ? '#22262f' : '#f0f0f0';
             const textColor = isDark ? '#5c6270' : '#a3a3a3';
 
-            if (btcChartInstance) {
-                btcChartInstance.destroy();
-            }
+            if (btcChartInstance) btcChartInstance.destroy();
 
-            const activeDataset = chartDataSets[currentPeriod];
+            const { labels, data } = filterDataForPeriod(btcHistoricalPrices, currentPeriod);
 
             btcChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: activeDataset.labels,
+                    labels: labels,
                     datasets: [{
-                        data: activeDataset.data,
+                        data: data,
                         borderColor: '#e08a3e',
                         borderWidth: 1.5,
                         pointRadius: 0,
@@ -312,7 +326,7 @@
                             borderColor: gridColor,
                             borderWidth: 1,
                             callbacks: {
-                                label: (ctx) => `$ ${ctx.parsed.y.toLocaleString('en-US')}`
+                                label: (ctx) => `$ ${ctx.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                             }
                         }
                     },
@@ -326,7 +340,7 @@
                             ticks: {
                                 color: textColor,
                                 font: { family: 'IBM Plex Mono', size: 10 },
-                                callback: (v) => '$ ' + (v / 1000) + 'k'
+                                callback: (v) => '$ ' + (v / 1000).toFixed(0) + 'k'
                             }
                         }
                     }
@@ -334,37 +348,19 @@
             });
         }
 
-        function updateChart(period) {
+        function changeChartPeriod(period, evt) {
             currentPeriod = period;
             document.querySelectorAll('.chart-btn').forEach(btn => {
                 btn.classList.remove('text-btc', 'underline', 'underline-offset-8');
                 btn.classList.add('hover:text-gray-900', 'dark:hover:text-white');
             });
-            event.target.classList.add('text-btc', 'underline', 'underline-offset-8');
-            initOrUpdateChart();
+            evt.target.classList.add('text-btc', 'underline', 'underline-offset-8');
+            renderChart();
         }
 
-        // --- Live Tracker Logic (CoinGecko API + MM200) ---
-        const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2 });
+        // --- CoinGecko API Logic ---
+        const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-        async function fetchWithRetry(url, retries = 3, backoff = 1000) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const res = await fetch(url);
-                    if (res.status === 429) {
-                        if (i === retries - 1) throw new Error('Limite de requisições excedido (429).');
-                        await delay(backoff * (i + 1));
-                        continue;
-                    }
-                    if (!res.ok) throw new Error(`Erro de rede (${res.status})`);
-                    return await res.json();
-                } catch (err) {
-                    if (i === retries - 1) throw err;
-                    await delay(backoff * (i + 1));
-                }
-            }
-        }
 
         function startClock() {
             const clockEl = document.getElementById('clockDisplay');
@@ -379,21 +375,40 @@
             return { cls: 'bg-red-500/10 text-up', label: 'Esticado' };
         }
 
-        function sma200(prices) {
-            if (!prices || prices.length === 0) return 0;
-            const closes = prices.map(p => p[1]).slice(-200);
+        function sma200(pricesArr) {
+            if (!pricesArr || pricesArr.length === 0) return 0;
+            const closes = pricesArr.map(p => p[1]).slice(-200);
             return closes.reduce((a, b) => a + b, 0) / closes.length;
         }
 
-        async function fetchAssetUSD(id) {
-            const chart = await fetchWithRetry(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`);
-            if (!chart.prices || chart.prices.length === 0) throw new Error('Dados indisponíveis para ' + id);
-            const price = chart.prices[chart.prices.length - 1][1];
-            const sma = sma200(chart.prices);
-            return { price, sma };
+        async function fetchCoinGeckoAsset(id) {
+            const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=200&interval=daily`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Falha na API CoinGecko (${res.status})`);
+            const data = await res.json();
+            
+            if (!data.prices || data.prices.length === 0) throw new Error('Sem dados históricos para ' + id);
+            
+            const currentPrice = data.prices[data.prices.length - 1][1];
+            const sma = sma200(data.prices);
+            return { price: currentPrice, sma, rawPrices: data.prices };
         }
 
-        function paintUSD(prefix, price, sma) {
+        async function fetchBrlRate() {
+            try {
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=brl');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.tether && data.tether.brl) {
+                        usdRateBrl = data.tether.brl;
+                    }
+                }
+            } catch (e) {
+                console.warn('Usando taxa padrão USD/BRL devido à falha ao carregar câmbio:', e);
+            }
+        }
+
+        function updateAssetUI(prefix, price, sma) {
             const mm = price / sma;
             document.getElementById(prefix + 'PriceOut').textContent = fmtUSD(price);
             document.getElementById(prefix + 'MM').textContent = mm.toFixed(2) + 'x';
@@ -409,35 +424,45 @@
             }
         }
 
-        async function loadTracker() {
+        async function loadTrackerData() {
             const statusEl = document.getElementById('status');
             const lastFetchText = document.getElementById('lastFetchText');
 
             statusEl.className = 'status loading flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-            lastFetchText.textContent = 'Buscando cotações atualizadas...';
+            lastFetchText.textContent = 'Buscando cotações CoinGecko...';
 
             try {
-                const btc = await fetchAssetUSD('bitcoin');
-                await delay(500);
-                const xaut = await fetchAssetUSD('tether-gold');
+                // Fetch USD/BRL conversion rate
+                await fetchBrlRate();
 
-                paintUSD('btc', btc.price, btc.sma);
-                paintUSD('xaut', xaut.price, xaut.sma);
+                // Fetch Bitcoin
+                const btc = await fetchCoinGeckoAsset('bitcoin');
+                btcHistoricalPrices = btc.rawPrices;
+                updateAssetUI('btc', btc.price, btc.sma);
+                renderChart();
+
+                // Brief pause to prevent rate limit on CoinGecko public API
+                await delay(1200);
+
+                // Fetch Tether Gold
+                const xaut = await fetchCoinGeckoAsset('tether-gold');
+                updateAssetUI('xaut', xaut.price, xaut.sma);
 
                 statusEl.className = 'status live flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-                lastFetchText.textContent = 'Última atualização às ' + new Date().toLocaleTimeString('pt-BR');
+                lastFetchText.textContent = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR');
             } catch (err) {
                 statusEl.className = 'status err flex items-center gap-2 text-xs font-mono text-gray-500 dark:text-gray-400';
-                lastFetchText.textContent = 'Falha: ' + err.message;
+                lastFetchText.textContent = 'Erro ao conectar à API CoinGecko';
+                console.error('CoinGecko Fetch Error:', err);
             }
         }
 
-        // Inicialização
+        // Init
         window.onload = function() {
-            initOrUpdateChart();
             startClock();
-            loadTracker();
-            setInterval(loadTracker, 120000);
+            loadTrackerData();
+            // Auto update every 2.5 minutes
+            setInterval(loadTrackerData, 150000);
         };
     </script>
 </body>
