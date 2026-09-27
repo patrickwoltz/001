@@ -184,7 +184,7 @@
                     <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
                         <!-- Mode Selector (Preço vs MM200) -->
                         <div class="flex bg-gray-200 dark:bg-dark-700 p-1 rounded-xl">
-                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">Preços</button>
+                            <button onclick="changeMetric('price', event)" class="metric-btn active px-3 py-1.5 rounded-lg text-white bg-btc font-medium transition">Preços + MM200</button>
                             <button onclick="changeMetric('mayer', event)" class="metric-btn px-3 py-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition">Múltiplo MM200</button>
                         </div>
                     </div>
@@ -316,6 +316,18 @@
             return result;
         }
 
+        // Retorna a série da MM200 em valor de preço (não a razão), para sobrepor ao gráfico de preço
+        function calculateSMASeries(pricesArr) {
+            const result = [];
+            for (let i = 0; i < pricesArr.length; i++) {
+                const slice = pricesArr.slice(Math.max(0, i - 199), i + 1);
+                const sum = slice.reduce((acc, curr) => acc + curr[1], 0);
+                const sma = sum / slice.length;
+                result.push({ timestamp: pricesArr[i][0], value: sma });
+            }
+            return result;
+        }
+
         function filterSeries(arr, period) {
             if (!arr || arr.length === 0) return [];
             
@@ -349,10 +361,14 @@
 
             let btcSeries = [];
             let xautSeries = [];
+            let btcSmaSeries = [];
+            let xautSmaSeries = [];
 
             if (currentMetric === 'price') {
                 btcSeries = filterSeries(btcData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
                 xautSeries = filterSeries(xautData.map(p => ({ timestamp: p[0], value: p[1] })), currentPeriod);
+                btcSmaSeries = filterSeries(calculateSMASeries(btcData), currentPeriod);
+                xautSmaSeries = filterSeries(calculateSMASeries(xautData), currentPeriod);
             } else {
                 const btcMayer = calculateMayerSeries(btcData);
                 const xautMayer = calculateMayerSeries(xautData);
@@ -386,36 +402,66 @@
             const currSymbol = selectedCurrency === 'brl' ? 'R$' : '$';
             const localeStr = selectedCurrency === 'brl' ? 'pt-BR' : 'en-US';
 
+            const datasets = [
+                {
+                    label: 'BTC ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
+                    data: btcSeries.map(s => s.value),
+                    borderColor: btcDefaultColor,
+                    backgroundColor: btcDefaultColor,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'yBTC',
+                    tension: 0.25,
+                    segment: getSegmentColor(btcDefaultColor)
+                },
+                {
+                    label: 'XAUT ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
+                    data: xautSeries.map(s => s.value),
+                    borderColor: xautDefaultColor,
+                    backgroundColor: xautDefaultColor,
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'yXAUT',
+                    tension: 0.25,
+                    segment: getSegmentColor(xautDefaultColor)
+                }
+            ];
+
+            // No modo "Preços", sobrepõe a MM200 (média móvel de 200 dias) como referência tracejada
+            if (currentMetric === 'price') {
+                datasets.push({
+                    label: 'BTC MM200 (média)',
+                    data: btcSmaSeries.map(s => s.value),
+                    borderColor: btcDefaultColor + '99',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.25,
+                    borderDash: [4, 3],
+                    pointRadius: 0,
+                    pointHoverRadius: 3,
+                    yAxisID: 'yBTC',
+                    tension: 0.25
+                });
+                datasets.push({
+                    label: 'XAUT MM200 (média)',
+                    data: xautSmaSeries.map(s => s.value),
+                    borderColor: xautDefaultColor + '99',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.25,
+                    borderDash: [4, 3],
+                    pointRadius: 0,
+                    pointHoverRadius: 3,
+                    yAxisID: 'yXAUT',
+                    tension: 0.25
+                });
+            }
+
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: 'BTC ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
-                            data: btcSeries.map(s => s.value),
-                            borderColor: btcDefaultColor,
-                            backgroundColor: btcDefaultColor,
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            yAxisID: 'yBTC',
-                            tension: 0.25,
-                            segment: getSegmentColor(btcDefaultColor)
-                        },
-                        {
-                            label: 'XAUT ' + (currentMetric === 'price' ? selectedCurrency.toUpperCase() : 'Múltiplo MM200'),
-                            data: xautSeries.map(s => s.value),
-                            borderColor: xautDefaultColor,
-                            backgroundColor: xautDefaultColor,
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            yAxisID: 'yXAUT',
-                            tension: 0.25,
-                            segment: getSegmentColor(xautDefaultColor)
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
